@@ -216,7 +216,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--gold)}
 
 /* One-screen play layout: the wheel scales to the viewport height, chips and the start button share the fixed dock, and the result is a strip under the wheel. */
 :root{--wheel:300px;--dock:136px}
-@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 458px),340px)}}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 468px),340px)}}
 .top{padding:calc(8px + env(safe-area-inset-top)) 14px 6px}
 .brand{min-width:0}
 .brand-main{font-size:23px}
@@ -235,7 +235,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--gold)}
 .lantern-row i{width:18px;height:42px}
 .lantern-row i::before{left:8px;height:14px}
 .lantern-row i::after{top:14px;width:18px;height:26px;border-top-width:2px;border-bottom-width:2px}
-.marquee{margin:26px 0 4px;font-size:16px;letter-spacing:.1em}
+.marquee{margin:26px 0 4px;font-size:18px;letter-spacing:.1em}
 .marquee span{margin:0 6px;font-size:12px}
 .stage{width:min(100%,var(--wheel))}
 .caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--muted)}
@@ -269,7 +269,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--gold)}
 .stalls{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
 .stalls button{min-height:56px;font-size:13px}
 .stall-lamp{width:12px;height:15px}
-@media(max-height:720px){.marquee{display:none}.lantern-row i{height:34px}.lantern-row i::after{height:20px}.stage-card{padding-top:32px}}
+@media(max-height:720px){.lantern-row i{height:36px}.lantern-row i::after{height:22px}.marquee{margin-top:24px}}
 
 /* Keep the three-line result strip inside the one-screen budget. */
 .outcome{min-height:70px}

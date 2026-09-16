@@ -203,7 +203,7 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 
 /* One-screen play layout: the wheel scales to the viewport height, bet tiles and the start button share the fixed dock, and the result is a tile strip under the wheel. */
 :root{--wheel:300px;--dock:136px}
-@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 452px),340px)}}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 458px),340px)}}
 .signboard{padding:calc(8px + env(safe-area-inset-top)) 14px 8px;border-bottom-width:3px}
 .sign{min-width:0}
 .sign-main{font-size:23px}
@@ -216,7 +216,7 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 .tile-hint{display:none}
 .table-center{margin:8px 10px 0;padding:8px 8px 8px;border-width:4px;border-radius:20px}
 .compass span{width:22px;height:24px;font-size:13px}
-.table-title{margin:0 0 4px;font-size:16px;letter-spacing:.2em}
+.table-title{margin:0 0 4px;font-size:18px;letter-spacing:.2em}
 .stage{width:min(100%,var(--wheel))}
 .caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--mint)}
 .outcome{min-height:62px;display:grid;align-items:center;margin-top:4px}
@@ -248,7 +248,7 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 .spin-btn small{font-size:12px}
 .drawer-nav{padding:6px 10px calc(6px + env(safe-area-inset-bottom));border-top-width:2px}
 .drawer-nav button{min-height:56px;font-size:13px}
-@media(max-height:720px){.table-title{display:none}.compass span{display:none}}
+@media(max-height:720px){.compass span{display:none}}
 
 /* Keep the three-line result strip inside the one-screen budget. */
 .outcome{min-height:70px}

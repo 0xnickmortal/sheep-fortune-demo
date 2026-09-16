@@ -223,7 +223,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--red)}
 
 /* One-screen play layout: the wheel scales to the viewport height, bet packets and the start button share the fixed dock, and the result is a strip under the wheel. */
 :root{--wheel:300px;--dock:136px}
-@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 448px),340px)}}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 454px),340px)}}
 .top{padding:calc(8px + env(safe-area-inset-top)) 14px 6px;gap:10px}
 .brand{gap:8px;min-width:0}
 .brand-text{min-width:0}
@@ -243,7 +243,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--red)}
 .crackers{top:6px;width:11px;height:70px}
 .crackers-left{left:10px}
 .crackers-right{right:10px}
-.banner-title{margin:0 0 4px;font-size:16px;letter-spacing:.1em}
+.banner-title{margin:0 0 4px;font-size:18px;letter-spacing:.1em}
 .banner-title span{margin:0 6px;font-size:12px}
 .stage{width:min(100%,var(--wheel))}
 .caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--muted)}
@@ -279,7 +279,7 @@ dialog h2{font-size:21px;font-weight:800;color:var(--red)}
 .plaques{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
 .plaques button{min-height:56px;font-size:13px}
 .plaques i{width:14px;height:14px}
-@media(max-height:720px){.banner-title{display:none}.crackers{height:54px}}
+@media(max-height:720px){.crackers{height:54px}}
 @media(max-width:360px){.brand-sub{display:block;font-size:10px}}
 
 /* Keep the three-line result strip inside the one-screen budget. */
