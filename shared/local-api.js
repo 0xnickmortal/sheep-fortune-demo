@@ -56,6 +56,16 @@ export async function localApi(path, data, key) {
   if (route === 'POST /ingots/redeem') fail('金元宝兑换暂未开放，兑换规则将另行公布', 409, 'REDEMPTION_CLOSED');
   if (route === 'GET /payments') return { deposits: [], withdrawals: [] };
   if (route === 'POST /play') return play(data, key);
+  if (route === 'POST /demo/topup') {
+    const s = load(), value = parseAmount(data?.amount, { integer: true });
+    if (value > units('1000000')) fail('单次最多充值 1,000,000 测试币');
+    const prior = s.operations[key]; if (prior) return prior.response;
+    const next = BigInt(s.account.available) + value;
+    s.account = { ...s.account, available: String(next), revision: s.account.revision + 1 };
+    const response = { amount: formatAmount(value), balance: formatAmount(next), revision: s.account.revision };
+    if (typeof key === 'string') s.operations[key] = { fingerprint: JSON.stringify(data ?? {}), response };
+    save(); return response;
+  }
   if (route === 'POST /claim') fail('暂时没有可领取的奖励；游戏奖励已自动到账');
   if (path.startsWith('/auth/')) fail('分享试玩版只有测试币，钱包登录请到正式站点', 503, 'PAYMENTS_CLOSED');
   if (path.startsWith('/deposits') || path.startsWith('/withdrawals')) fail('分享试玩版不支持充值提现，当前只有测试币', 503, 'PAYMENTS_CLOSED');

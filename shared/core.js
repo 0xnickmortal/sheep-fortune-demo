@@ -219,14 +219,14 @@ export function createGame(ui) {
     box.append(el('p', '选好金额，点击开始。一次下注只转一次，抽中一个倍率，结算一次奖励。每次至少投入 500 币，可自定义整数金额。'));
     box.append(el('p', '数字倍率表示包含本金、扣费前的返还倍数。抽中大于 1 倍的奖项，在本局结算时收取投入金额的 5%；小于或等于 1 倍不收费。例：投入 500 币，1.2 倍返还 600 币，扣 25 币，实得 575 币；1.5 倍扣 25 币，实得 725 币。'));
     box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需再次点击开始才会下注。'));
-    box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.8 倍返还投入的 80%，其余 20% 按 1:1 获得金元宝。例如投入 1,000 币，分别获得 1,000 或 200 金元宝。1 倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
+    box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按 1:1 获得金元宝。例如投入 1,000 币，分别获得 1,000 或 500 金元宝。1 倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
     if (c?.rules.outcomes) {
       box.append(el('h3', '本版各倍率概率'));
       const table = el('table', undefined, 'prob-table'), header = el('tr'); header.append(el('th', '奖项'), el('th', '概率')); table.append(header);
       for (const outcome of c.rules.outcomes) { const row = el('tr'); row.append(el('td', sectorText(outcome).label), el('td', outcome.weight * 100 / c.rules.weightTotal + '%')); table.append(row); }
       box.append(table);
       const [lossChance, evenChance, winChance] = c.rules.resultProbabilities;
-      box.append(el('p', `同一奖项在盘面重复出现，格子数量不代表中奖概率；同名奖格按一个奖项计算，合计概率见上表。按当前概率，仅计算游戏内奖励，单次亏损概率为 ${lossChance}%，保本为 ${evenChance}%，盈利为 ${winChance}%；扣除本局手续费后的理论返还率为 ${c.rules.netRtp}。10 倍大奖概率为 0.01%，即万分之一，不代表每转一万次必定出现一次。`));
+      box.append(el('p', `同一奖项在盘面重复出现，格子数量不代表中奖概率；同名奖格按一个奖项计算，合计概率见上表。按当前概率，仅计算游戏内奖励，单次亏损概率为 ${lossChance}%，保本为 ${evenChance}%，盈利为 ${winChance}%；扣除本局手续费后的理论返还率为 ${c.rules.netRtp}。10 倍大奖概率为 0.05%，即两千分之一，不代表每转两千次必定出现一次。`));
     }
     box.append(el('p', '这是单次开奖的概率，不保证固定比例的玩家最终盈利，也不保证连续游戏时的本金损失范围。可能连续出现同一个倍率或连续亏损。'));
     box.append(el('p', '本版每次按以上固定概率开奖。投入的 9.3% 记为待销毁额度。'));
@@ -301,8 +301,19 @@ export function createGame(ui) {
     if (state.account.mode !== 'token') { ui.openDialog('请先连接钱包', '在“我的账户”连接钱包并签名登录，即可使用正式币账户。'); return false; }
     return true;
   }
+  // Test builds: the deposit button on a demo account adds test coins on the spot.
+  function demoTopup() {
+    form('充值测试币', '这次充多少测试币？', '10000', async value => {
+      if (!/^[1-9]\d{0,6}$/.test(value) || Number(value) > 1000000) throw new Error('请输入 1 至 1,000,000 之间的整数');
+      const result = await mutate('/demo/topup', { amount: value });
+      if (Number.isInteger(result.revision) && result.revision >= state.account.revision) { state.account.balance = result.balance; state.account.revision = result.revision; }
+      ui.closeDialog(); render(); await refresh(); ui.notice('已充值 ' + money(result.amount) + ' 测试币');
+    }, { note: '测试版调试功能：测试币只用于体验，不能提现，正式账户不可用。', inputMode: 'numeric', submit: '充值' });
+  }
   function deposit() {
-    if (!ready() || !checkPayments()) return;
+    if (!ready()) return;
+    if (state.account.mode === 'demo') return demoTopup();
+    if (!checkPayments()) return;
     const c = state.config, box = el('div');
     box.append(el('p', '仅支持 BSC 网络 ' + c.payments.symbol + '。请从当前登录钱包直接转账到下面地址，再提交交易哈希核对到账。'), el('p', c.payments.depositAddress, 'wallet-address'), el('p', '代币合约：' + c.payments.token, 'wallet-address'), el('p', `需等待 ${c.payments.confirmations} 个区块确认；按实际收到的代币数量入账。`));
     box.append(button('复制充值地址', async () => { try { await navigator.clipboard.writeText(c.payments.depositAddress); ui.notice('已复制'); } catch { ui.notice('请长按地址复制'); } }), button('我已转账，核对到账', () => form('核对充值到账', '粘贴完整交易哈希', '', async txHash => { const result = await mutate('/deposits', { txHash }); await refresh(); ui.openDialog('充值已到账', money(result.amount) + ' 币已进入游戏余额。'); }, { hash: true, submit: '核对到账' })));
@@ -372,7 +383,7 @@ export function ingotRows(records) {
   if (!records.length) return [el('p', '还没有金元宝记录', 'empty-note')];
   return records.map(round => {
     const row = el('article', undefined, 'record-row record-ingot'), main = el('div', undefined, 'record-main'), side = el('div', undefined, 'record-side');
-    main.append(el('strong', round.multiplierBps === 0 ? '谢谢参与' : '0.8×'), el('small', '投入 ' + money(round.bet) + ' 币 · ' + when(round.createdAt)));
+    main.append(el('strong', round.multiplierBps === 0 ? '谢谢参与' : round.multiplierBps / 10000 + '×'), el('small', '投入 ' + money(round.bet) + ' 币 · ' + when(round.createdAt)));
     side.append(el('strong', '+' + money(round.ingots), 'ingot-amount'), el('small', '金元宝已到账'));
     row.append(main, side); return row;
   });

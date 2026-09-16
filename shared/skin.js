@@ -27,6 +27,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('account-description', v.demo ? '测试币用于体验玩法' : '游戏余额与钱包余额分开显示');
       text('wallet-address', a.wallet || '当前使用测试账户');
       $('wallet-connect').firstElementChild.textContent = v.demo ? '连接钱包' : '返回测试体验';
+      text('deposit-open', v.demo ? '充测试币' : '充值');
       text('bet-note', `每局最低 ${money(v.config.rules.minBet)} 币 · 当前上限 ${money(a.maxBet)} 币`);
       text('pool-note', '服务器奖池余额 ' + money(a.pool) + ' ' + v.unit);
       for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === v.bet; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); }
