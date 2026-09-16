@@ -13,10 +13,9 @@
 <body>
 <div class="table-shell">
 <header class="signboard">
-  <a class="sign" href="../jade/index.html"><span class="sign-main">翡翠麻将馆</span><span class="sign-sub">羊年大吉 · 好运转盘</span></a>
+  <a class="sign" href="../jade/index.html"><span class="sign-main">翡翠麻将馆</span><span class="sign-sub" id="mode-banner">正在连接游戏账户…</span></a>
   <div class="sign-actions"><button id="sound" class="tile-btn" aria-label="关闭音效" aria-pressed="true">♪</button><button id="rules-open" class="tile-btn">玩法</button></div>
 </header>
-<p class="mode-banner" id="mode-banner">正在连接游戏账户…</p>
 <main>
 <section id="play-view" class="view" aria-labelledby="play-title">
   <div class="rack">
@@ -31,23 +30,13 @@
       <div class="hub" aria-hidden="true"><img id="mascot" src="../assets/fortune-sheep.png" alt="" width="1254" height="1254" fetchpriority="high"></div>
       <div class="pointer" aria-hidden="true"><span>指</span></div>
     </div>
-    <p class="stage-message" id="stage-message" role="status">选好牌面金额，开转！</p>
-    <div class="result" id="result" role="status" hidden></div>
+    <p class="caption">格子数量不代表中奖概率 · 10× 万分之一 · 大于 1× 按本局投入收 5%</p>
+    <div class="outcome"><p class="stage-message" id="stage-message" role="status">选好牌面金额，开转！</p><div class="result" id="result" role="status" hidden></div><div id="connection-message" class="connection" role="status"></div></div>
   </div>
-  <section class="hand" aria-labelledby="hand-title">
-    <h2 id="hand-title">这一局出多少？</h2>
-    <div class="hand-tiles" id="bet-choices">
-      <button class="tile tile-bet" data-bet="500" aria-pressed="true"><b>500</b><small>币</small></button>
-      <button class="tile tile-bet" data-bet="1000" aria-pressed="false"><b>1,000</b><small>币</small></button>
-      <button class="tile tile-bet" data-bet="2000" aria-pressed="false"><b>2,000</b><small>币</small></button>
-      <button class="tile tile-bet tile-custom" id="custom-bet" aria-pressed="false"><b>自定</b><small>任意整数</small></button>
-    </div>
-    <p class="bet-note" id="bet-note">每局最低 500 币</p>
-  </section>
-  <div id="connection-message" class="connection" role="status"></div>
   <section class="legend" aria-labelledby="legend-title">
     <h2 id="legend-title">牌面奖项</h2>
     <ul id="prizes" class="prize-tiles" aria-label="全部奖项"></ul>
+    <p class="bet-note" id="bet-note">每局最低 500 币</p>
     <p class="disclosure">格子数量不代表中奖概率 · 10× 万分之一<br>大于 1× 按本局投入收 5% · 其余免收 · 奖励自动到账<br><button id="wheel-rules" class="link-btn">查看全部概率</button></p>
   </section>
 </section>
@@ -82,7 +71,12 @@
   <nav class="skins" aria-label="切换界面风格"><span>换个风格：</span><a href="../night/index.html">福运夜市</a><a href="../jade/index.html" aria-current="page">翡翠麻将馆</a><a href="../index.html">红运当头</a></nav>
 </section>
 </main>
-<div class="dock" id="dock"><button id="start" class="spin-btn" disabled><span class="spin-label">开转</span><small id="start-cost">本局投入 500 币</small></button></div>
+<div class="dock" id="dock"><div class="hand-tiles" id="bet-choices">
+      <button class="tile tile-bet" data-bet="500" aria-pressed="true"><b>500</b><small>币</small></button>
+      <button class="tile tile-bet" data-bet="1000" aria-pressed="false"><b>1,000</b><small>币</small></button>
+      <button class="tile tile-bet" data-bet="2000" aria-pressed="false"><b>2,000</b><small>币</small></button>
+      <button class="tile tile-bet tile-custom" id="custom-bet" aria-pressed="false"><b>自定</b><small>任意整数</small></button>
+    </div><button id="start" class="spin-btn" disabled><span class="spin-label">开转</span><small id="start-cost">本局投入 500 币</small></button></div>
 <nav class="drawer-nav" aria-label="主要功能">
   <button data-tab="play" class="active" aria-current="page"><i aria-hidden="true"></i><span>玩游戏</span></button>
   <button data-tab="rewards"><i aria-hidden="true"></i><span>金元宝</span></button>

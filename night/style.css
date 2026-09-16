@@ -213,3 +213,66 @@ dialog h2{font-size:21px;font-weight:800;color:var(--gold)}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .pouch-body strong.long{font-size:18px}
 .pouch-body strong.longer{font-size:15px}
+
+/* One-screen play layout: the wheel scales to the viewport height, chips and the start button share the fixed dock, and the result is a strip under the wheel. */
+:root{--wheel:300px;--dock:136px}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 458px),340px)}}
+.top{padding:calc(8px + env(safe-area-inset-top)) 14px 6px}
+.brand{min-width:0}
+.brand-main{font-size:23px}
+.brand-sub{font-size:11px;letter-spacing:.04em;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:40px;height:40px;font-size:19px}
+.pill-btn{min-height:40px;padding:0 12px;font-size:14px}
+.hud{margin:4px 12px 0;gap:8px}
+.pouch{min-height:52px;padding:6px 8px 6px 9px;border-radius:14px}
+.pouch-icon{width:28px;height:28px;font-size:13px}
+.pouch-body small{font-size:11px}
+.pouch-body strong{font-size:19px}
+.pouch-body strong.long{font-size:16px}
+.pouch-body strong.longer{font-size:14px}
+.stage-card{margin:8px 10px 0;padding:8px 8px 8px;border-radius:20px}
+.lantern-row{top:-4px;padding:0 14px}
+.lantern-row i{width:18px;height:42px}
+.lantern-row i::before{left:8px;height:14px}
+.lantern-row i::after{top:14px;width:18px;height:26px;border-top-width:2px;border-bottom-width:2px}
+.marquee{margin:26px 0 4px;font-size:16px;letter-spacing:.1em}
+.marquee span{margin:0 6px;font-size:12px}
+.stage{width:min(100%,var(--wheel))}
+.caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--muted)}
+.outcome{min-height:62px;display:grid;align-items:center;margin-top:4px}
+.stage-message{margin:0;font-size:15px}
+.result{display:flex;align-items:center;gap:10px;margin:0;padding:8px 10px 8px 12px;border-radius:14px;text-align:left;animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+.result-main{flex:none;display:grid;justify-items:center;min-width:64px}
+.result-multiplier{font-size:28px;line-height:1.05}
+.result-jackpot .result-multiplier{font-size:32px}
+.result-empty .result-multiplier{font-size:16px}
+.result-flavor{font-size:11px;letter-spacing:.08em}
+.result-side{flex:1;min-width:0;display:grid;gap:1px}
+.result-side strong{font-size:15px;font-weight:800;color:var(--cream)}
+.result-side small{font-size:12px;color:var(--muted);overflow-wrap:anywhere}
+.result-side .result-ingots{display:inline-block;justify-self:start;margin:2px 0 0;padding:1px 8px;font-size:12px;color:#5a1a0a}
+.result-side .result-message{color:#ffe9a8}
+.connection{margin:6px 0 0}
+#play-view{padding-bottom:calc(var(--dock) + 84px + env(safe-area-inset-bottom))}
+.legend{margin-top:14px}
+.legend .bet-note{margin:10px 0 0}
+.dock{bottom:calc(70px + env(safe-area-inset-bottom));display:grid;gap:8px;padding:8px 12px 6px;background:linear-gradient(transparent,rgba(11,16,48,.96) 12%)}
+.dock .chips{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;pointer-events:auto}
+.dock .chip{aspect-ratio:auto;min-height:50px;border-radius:14px;background:radial-gradient(ellipse at 50% 42%,#ffe9a8 0 62%,#d9a441 63% 70%,#ffe9a8 71% 78%,#b8862b 79%)}
+.dock .chip b{font-size:16px}
+.dock .chip small{font-size:10px}
+.dock .chip-custom{background:radial-gradient(ellipse at 50% 42%,#ffd9d9 0 62%,#c81e1e 63% 70%,#ffd9d9 71% 78%,#8f1414 79%)}
+.dock .chip-custom b{font-size:13px}
+.dock .chip.chosen{transform:translateY(-4px) scale(1.03);box-shadow:0 8px 0 var(--gold-dark),0 12px 18px rgba(0,0,0,.55),0 0 18px rgba(255,209,102,.7)}
+.spin-btn{min-height:62px;border-radius:18px;font-size:23px}
+.spin-btn small{font-size:12px}
+.stalls{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+.stalls button{min-height:56px;font-size:13px}
+.stall-lamp{width:12px;height:15px}
+@media(max-height:720px){.marquee{display:none}.lantern-row i{height:34px}.lantern-row i::after{height:20px}.stage-card{padding-top:32px}}
+
+/* Keep the three-line result strip inside the one-screen budget. */
+.outcome{min-height:70px}
+.result{padding:6px 10px 6px 12px;line-height:1.25}
+.result-side{gap:0}
+.result-main{line-height:1.1}

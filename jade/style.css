@@ -200,3 +200,58 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 .tile-balance strong.long,.tile-ingot strong.long{font-size:19px}
 .tile-balance strong.longer,.tile-ingot strong.longer{font-size:16px}
+
+/* One-screen play layout: the wheel scales to the viewport height, bet tiles and the start button share the fixed dock, and the result is a tile strip under the wheel. */
+:root{--wheel:300px;--dock:136px}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 452px),340px)}}
+.signboard{padding:calc(8px + env(safe-area-inset-top)) 14px 8px;border-bottom-width:3px}
+.sign{min-width:0}
+.sign-main{font-size:23px}
+.sign-sub{font-size:11px;letter-spacing:.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-btn{min-height:40px;min-width:40px;padding:0 10px 4px;font-size:14px}
+.rack{margin:8px 12px 0;gap:8px}
+.tile-balance,.tile-ingot{min-height:54px;padding:6px 10px 10px;gap:0}
+.tile-balance small,.tile-ingot small{font-size:11px}
+.tile-balance strong,.tile-ingot strong{font-size:20px}
+.tile-hint{display:none}
+.table-center{margin:8px 10px 0;padding:8px 8px 8px;border-width:4px;border-radius:20px}
+.compass span{width:22px;height:24px;font-size:13px}
+.table-title{margin:0 0 4px;font-size:16px;letter-spacing:.2em}
+.stage{width:min(100%,var(--wheel))}
+.caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--mint)}
+.outcome{min-height:62px;display:grid;align-items:center;margin-top:4px}
+.stage-message{margin:0;font-size:15px}
+.result{display:flex;align-items:center;gap:10px;max-width:none;margin:0;padding:8px 10px 8px 12px;border-radius:12px;text-align:left;box-shadow:inset 0 -5px 0 var(--bone),inset 0 1px 0 #fff,0 4px 0 var(--bone-dark),0 8px 16px rgba(0,0,0,.45);animation:flip .45s cubic-bezier(.2,1.2,.4,1)}
+.result-stamp{top:-9px;right:8px;padding:0 5px;border-width:2px;font-size:12px}
+.result-main{flex:none;display:grid;justify-items:center;min-width:64px}
+.result-multiplier{font-size:28px;line-height:1.05}
+.result-jackpot .result-multiplier{font-size:32px}
+.result-empty .result-multiplier{font-size:16px}
+.result-flavor{font-size:11px;letter-spacing:.08em}
+.result-side{flex:1;min-width:0;display:grid;gap:1px}
+.result-side strong{font-size:15px;font-weight:800;color:var(--ink)}
+.result-side small{font-size:12px;color:var(--ink-soft);overflow-wrap:anywhere}
+.result-side .result-ingots{display:inline-block;justify-self:start;margin:2px 0 0;padding:1px 8px;font-size:12px;box-shadow:0 2px 0 #8a5a12}
+.result-side .result-message{color:var(--ink)}
+.connection{margin:6px 0 0}
+#play-view{padding-bottom:calc(var(--dock) + 84px + env(safe-area-inset-bottom))}
+.legend{margin-top:14px}
+.legend .bet-note{margin:10px 0 0}
+.dock{bottom:calc(70px + env(safe-area-inset-bottom));display:grid;gap:8px;padding:8px 12px 6px;background:linear-gradient(transparent,rgba(18,69,47,.96) 12%)}
+.dock .hand-tiles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:0;align-items:stretch;pointer-events:auto}
+.dock .tile-bet{aspect-ratio:auto;min-height:50px;padding:4px 2px 8px;border-radius:8px;gap:0}
+.dock .tile-bet b{font-size:16px}
+.dock .tile-bet small{font-size:10px}
+.dock .tile-custom b{font-size:14px}
+.dock .tile-bet.chosen{transform:translateY(-4px);box-shadow:inset 0 -5px 0 var(--bone),inset 0 0 0 2px var(--lacquer),0 8px 0 var(--bone-dark),0 12px 18px rgba(0,0,0,.5)}
+.spin-btn{min-height:62px;border-radius:16px;font-size:24px;letter-spacing:.28em;text-indent:.28em}
+.spin-btn small{font-size:12px}
+.drawer-nav{padding:6px 10px calc(6px + env(safe-area-inset-bottom));border-top-width:2px}
+.drawer-nav button{min-height:56px;font-size:13px}
+@media(max-height:720px){.table-title{display:none}.compass span{display:none}}
+
+/* Keep the three-line result strip inside the one-screen budget. */
+.outcome{min-height:70px}
+.result{padding:6px 10px 6px 12px;line-height:1.25}
+.result-side{gap:0}
+.result-main{line-height:1.1}

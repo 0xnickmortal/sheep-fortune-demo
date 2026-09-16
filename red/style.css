@@ -220,3 +220,70 @@ dialog h2{font-size:21px;font-weight:800;color:var(--red)}
 @media(max-width:360px){.top{padding-left:12px;padding-right:12px}.brand-main{font-size:23px}.brand-sub{display:none}.seal{width:44px;height:44px;font-size:20px}.pill-btn{padding:0 12px}.hud{margin:10px 12px 0;gap:8px}.packet-card{padding:8px}.packet-body strong{font-size:19px}.stage-card{margin:12px 8px 0;padding:16px 6px 14px}.banner-title{font-size:19px}.crackers{height:84px}.packets-panel,.legend{margin-left:12px;margin-right:12px}.packets{gap:7px}.packet b{font-size:17px}.packet-custom b{font-size:13px}.seg-label{font-size:22px}.spin-btn{font-size:24px}}
 @media(max-height:760px){.stage{width:min(100%,300px)}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+
+/* One-screen play layout: the wheel scales to the viewport height, bet packets and the start button share the fixed dock, and the result is a strip under the wheel. */
+:root{--wheel:300px;--dock:136px}
+@supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 448px),340px)}}
+.top{padding:calc(8px + env(safe-area-inset-top)) 14px 6px;gap:10px}
+.brand{gap:8px;min-width:0}
+.brand-text{min-width:0}
+.seal{width:40px;height:40px;font-size:19px}
+.brand-main{font-size:23px;letter-spacing:.06em}
+.brand-sub{display:block;font-size:11px;letter-spacing:.04em;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.icon-btn{width:40px;height:40px;font-size:19px}
+.pill-btn{min-height:40px;padding:0 12px;font-size:14px}
+.hud{margin:4px 12px 0;gap:8px}
+.packet-card{min-height:52px;padding:6px 8px 6px 9px;border-radius:13px;box-shadow:0 4px 0 #5c0714,0 6px 14px rgba(0,0,0,.35)}
+.packet-seal{width:28px;height:28px;font-size:13px}
+.packet-body small{font-size:11px}
+.packet-body strong{font-size:19px}
+.packet-body strong.long{font-size:16px}
+.packet-body strong.longer{font-size:14px}
+.stage-card{margin:8px 10px 0;padding:8px 8px 8px;border-radius:20px}
+.crackers{top:6px;width:11px;height:70px}
+.crackers-left{left:10px}
+.crackers-right{right:10px}
+.banner-title{margin:0 0 4px;font-size:16px;letter-spacing:.1em}
+.banner-title span{margin:0 6px;font-size:12px}
+.stage{width:min(100%,var(--wheel))}
+.caption{margin:6px 0 0;font-size:11px;line-height:1.4;color:var(--muted)}
+.outcome{min-height:62px;display:grid;align-items:center;margin-top:4px}
+.stage-message{margin:0;font-size:15px}
+.result{display:flex;align-items:center;gap:10px;margin:0;padding:8px 10px 8px 12px;border-radius:14px;text-align:left;animation:pop .3s cubic-bezier(.2,1.4,.4,1)}
+.result::before{display:none}
+.result-stamp{top:-9px;right:8px;padding:0 5px;border-width:2px;font-size:12px}
+.result-main{flex:none;display:grid;justify-items:center;min-width:64px}
+.result-multiplier{font-size:28px;line-height:1.05}
+.result-jackpot .result-multiplier{font-size:32px}
+.result-empty .result-multiplier{font-size:16px}
+.result-flavor{font-size:11px;letter-spacing:.08em}
+.result-side{flex:1;min-width:0;display:grid;gap:1px}
+.result-side strong{font-size:15px;font-weight:800;color:var(--ink)}
+.result-side small{font-size:12px;color:var(--ink-soft);overflow-wrap:anywhere}
+.result-side .result-ingots{display:inline-block;justify-self:start;margin:2px 0 0;padding:1px 8px;font-size:12px;box-shadow:0 2px 0 var(--gold-dark)}
+.result-side .result-message{color:var(--ink)}
+.connection{margin:6px 0 0}
+#play-view{padding-bottom:calc(var(--dock) + 84px + env(safe-area-inset-bottom))}
+.legend{margin-top:14px}
+.legend .bet-note{margin:10px 0 0}
+.dock{bottom:calc(70px + env(safe-area-inset-bottom));display:grid;gap:8px;padding:8px 12px 6px;background:linear-gradient(transparent,rgba(122,10,24,.96) 12%)}
+.dock .packets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:8px 0 0;align-items:stretch;pointer-events:auto}
+.dock .packet{aspect-ratio:auto;min-height:50px;padding:6px 2px 4px;border-radius:10px;gap:0}
+.dock .packet::before{top:-9px;width:18px;height:18px;font-size:10px}
+.dock .packet b{font-size:16px}
+.dock .packet small{font-size:10px}
+.dock .packet-custom b{font-size:13px}
+.dock .packet.chosen{transform:translateY(-4px);box-shadow:0 8px 0 #5c0714,0 12px 18px rgba(0,0,0,.45),0 0 18px rgba(255,209,102,.7)}
+.spin-btn{min-height:62px;border-radius:18px;font-size:23px}
+.spin-btn small{font-size:12px}
+.plaques{padding:6px 10px calc(6px + env(safe-area-inset-bottom))}
+.plaques button{min-height:56px;font-size:13px}
+.plaques i{width:14px;height:14px}
+@media(max-height:720px){.banner-title{display:none}.crackers{height:54px}}
+@media(max-width:360px){.brand-sub{display:block;font-size:10px}}
+
+/* Keep the three-line result strip inside the one-screen budget. */
+.outcome{min-height:70px}
+.result{padding:6px 10px 6px 12px;line-height:1.25}
+.result-side{gap:0}
+.result-main{line-height:1.1}

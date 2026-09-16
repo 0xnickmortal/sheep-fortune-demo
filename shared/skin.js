@@ -13,6 +13,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
   function notice(message) { text('toast', message); $('toast').hidden = false; clearTimeout(toastTimer); toastTimer = setTimeout(() => { $('toast').hidden = true; }, 5000); }
   function openDialog(title, content) { text('dialog-title', title); const box = $('dialog-content'); box.replaceChildren(); box.append(typeof content === 'string' ? el('p', content) : content); if (!$('dialog').open) $('dialog').showModal(); }
   function closeDialog() { if ($('dialog').open) $('dialog').close(); }
+  function message(value) { $('result').hidden = true; $('stage-message').hidden = false; text('stage-message', value); }
   const ui = {
     render(v) {
       if (!v.account) return;
@@ -44,32 +45,32 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
     },
     beginSpin() {
       for (const g of groups) g.classList.remove('landed');
-      $('result').hidden = true; const s = stage(); s.classList.remove('result-win', 'result-loss', 'result-even', 'has-result'); s.classList.add('is-resolving');
-      text('stage-message', '正在开奖，请稍候…'); s.setAttribute('aria-label', '幸运转盘，正在开奖');
+      const s = stage(); s.classList.remove('result-win', 'result-loss', 'result-even', 'has-result'); s.classList.add('is-resolving');
+      message('正在开奖，请稍候…'); s.setAttribute('aria-label', '幸运转盘，正在开奖');
     },
     async spinTo(index) {
-      const s = stage(); s.classList.remove('is-resolving'); s.classList.add('is-spinning'); text('stage-message', spinningMessage);
+      const s = stage(); s.classList.remove('is-resolving'); s.classList.add('is-spinning'); message(spinningMessage);
       const target = stopAngle(rotation, index, segmentCount);
       await spinRotor($('wheel-rotor'), rotation, target, { count: segmentCount, onCross: () => sound.tick() });
       rotation = target; groups[index].classList.add('landed'); s.classList.remove('is-spinning');
     },
+    // A compact strip under the wheel: everything stays on one screen, no popup.
     showResult(round, { landed, copy, kind }) {
       const s = stage(), box = $('result');
       box.className = 'result result-' + kind; box.replaceChildren();
       s.classList.add('has-result'); s.setAttribute('aria-label', landed ? '转盘结果：' + copy.title : '已恢复上次结算，请查看下方奖励');
       if (landed && stamp?.[kind]) box.append(el('span', stamp[kind], 'result-stamp'));
-      box.append(el('div', landed ? (flavor[kind] || copy.title) : '已恢复上次结算', 'result-flavor'));
-      box.append(el('div', round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×', 'result-multiplier'));
-      const amount = el('div', undefined, 'result-amount'); amount.append(el('span', copy.amountLabel), el('strong', money(round.net) + ' 币')); box.append(amount);
-      box.append(el('p', copy.message, 'result-message'));
-      if (Number(round.ingots) > 0) { const gold = el('div', undefined, 'result-ingots'); gold.append(el('span', '金元宝 '), el('b', '+' + money(round.ingots))); box.append(gold); }
-      const details = el('div', undefined, 'result-details'), net = el('div', '本次净变化'), fee = el('div', round.version === game.state.config.rules.version ? '本局手续费' : '当时已扣费用');
-      net.append(el('b', signed(round.profit) + ' 币')); fee.append(el('b', money(round.fee) + ' 币')); details.append(net, fee); box.append(details);
-      box.hidden = false;
-      text('stage-message', landed ? copy.message : '已恢复上次游戏的结算结果');
+      const main = el('div', undefined, 'result-main');
+      main.append(el('b', round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×', 'result-multiplier'), el('span', landed ? (flavor[kind] || copy.title) : '已恢复上次结算', 'result-flavor'));
+      const side = el('div', undefined, 'result-side'), ingots = Number(round.ingots) > 0;
+      side.append(el('strong', copy.amountLabel + ' ' + money(round.net) + ' 币'));
+      side.append(el('small', '净变化 ' + signed(round.profit) + ' 币 · ' + (round.version === game.state.config.rules.version ? '手续费 ' : '当时已扣 ') + money(round.fee) + ' 币'));
+      side.append(el('small', ingots ? '金元宝 +' + money(round.ingots) : copy.message, ingots ? 'result-ingots' : 'result-message'));
+      box.append(main, side);
+      $('stage-message').hidden = true; box.hidden = false;
       if (landed) celebrate(kind, round, { stage: s, sound, particles, haptic });
     },
-    spinFailed(message) { text('stage-message', message); },
+    spinFailed(value) { message(value); },
     endSpin() { stage().classList.remove('is-resolving', 'is-spinning'); },
     setTab(name) {
       for (const section of document.querySelectorAll('.view')) section.hidden = section.id !== name + '-view';
@@ -79,7 +80,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
     },
     renderRecords(rounds) { $('records').replaceChildren(...recordRows(rounds)); },
     renderIngots(result) { $('ingot-records').replaceChildren(...ingotRows(result.records)); },
-    connectionError(message, retry) { const box = $('connection-message'); box.replaceChildren(el('p', message)); const b = el('button', '重新连接', 'dialog-primary'); b.type = 'button'; b.onclick = retry; box.append(b); text('mode-banner', '暂时无法连接游戏账户'); },
+    connectionError(value, retry) { const box = $('connection-message'); box.replaceChildren(el('p', value)); const b = el('button', '重新连接', 'dialog-primary'); b.type = 'button'; b.onclick = retry; box.append(b); text('mode-banner', '暂时无法连接游戏账户'); },
   };
   const game = createGame(ui);
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sound.click(); game.tab(b.dataset.tab); };
