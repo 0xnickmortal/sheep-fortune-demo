@@ -13,7 +13,11 @@
     "build": "node scripts/build.mjs",
     "pretest:backend": "npm run contracts:build",
     "test:backend": "node --test tests/backend*.test.mjs",
-    "db:generate": "drizzle-kit generate --config drizzle.config.ts"
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts",
+    "build:cloudflare": "node scripts/build.mjs --cloudflare",
+    "cf:dev": "npm run build:cloudflare && wrangler dev --config wrangler.json",
+    "cf:migrate": "wrangler d1 migrations apply DB --remote --config wrangler.json",
+    "cf:deploy": "npm run build:cloudflare && wrangler deploy --config wrangler.json"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.6.1",
@@ -22,6 +26,7 @@
   "devDependencies": {
     "drizzle-kit": "^0.31.10",
     "drizzle-orm": "^0.45.2",
-    "esbuild": "^0.28.2"
+    "esbuild": "^0.28.2",
+    "wrangler": "4.134.0"
   }
 }

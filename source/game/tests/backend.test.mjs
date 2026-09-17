@@ -144,8 +144,18 @@ test('confirmed reverted payout restores user balance rather than recording succ
 // Sites currently forwards the email identity even when there is no user-id header.
 test('platform identity reuses the same demo account after a session ends', async t => {
   const db = database(t), req = request('/auth/demo', {}, undefined, {'oai-authenticated-user-email':'Example@EXAMPLE.COM'});
-  const a = await demoLogin(db, req); await play(db, a.owner, key(), '500', opts);
-  const b = await demoLogin(db, req); assert.equal(b.owner, a.owner); assert.equal((await getState(db,b.owner)).balance, '19925');
+  const env = { TRUST_PLATFORM_IDENTITY: 'true' };
+  const a = await demoLogin(db, req, env); await play(db, a.owner, key(), '500', opts);
+  const b = await demoLogin(db, req, env); assert.equal(b.owner, a.owner); assert.equal((await getState(db,b.owner)).balance, '19925');
+});
+
+test('public Workers ignore forged platform identity headers and retain cookie sessions', async t => {
+  const db = database(t), req = request('/auth/demo', {}, undefined, {'oai-authenticated-user-id':'forged', 'oai-authenticated-user-email':'victim@example.com'});
+  const a = await demoLogin(db, req), b = await demoLogin(db, req);
+  assert.notEqual(a.owner, b.owner);
+  assert.ok(!a.owner.startsWith('demo:oai:'));
+  const again = await demoLogin(db, request('/auth/demo', {}, a.cookie.split(';')[0]));
+  assert.equal(again.owner, a.owner);
 });
 
 const drawFor = id => {

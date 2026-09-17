@@ -48,9 +48,9 @@ async function api(request, env) {
   }
   const data = request.method === 'POST' ? await body(request) : {}, key = request.headers.get('idempotency-key');
   const route = request.method + ' ' + path;
-  if (route === 'GET /api/health') { await first(db, 'SELECT 1 AS ok'); return json({ ok: true, paymentsEnabled: paymentConfig(env).enabled }); }
+  if (route === 'GET /api/health') { await first(db, 'SELECT 1 AS ok'); return json({ ok: true, paymentsEnabled: paymentConfig(env).enabled, rulesVersion: RULES.version }); }
   if (route === 'GET /api/config') return json({ rules: RULES, payments: paymentConfig(env), referrals: REFERRAL_RULES });
-  if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request); return json(await getState(db, login.owner), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
+  if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request, env); return json(await getState(db, login.owner), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
   if (route === 'POST /api/auth/challenge') return json(await challenge(db, request, data.address));
   if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await getState(db, login.owner), 200, { 'Set-Cookie': login.cookie }); }
   if (isAdmin) {

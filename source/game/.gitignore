@@ -8,3 +8,5 @@ dist-share/
 .pages-repo/
 artifacts/
 .forge-cache/
+.wrangler/
+.dev.vars*

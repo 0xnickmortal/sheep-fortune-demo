@@ -6,7 +6,7 @@ import worker from '../server/worker.js';
 await mkdir('.data', { recursive: true });
 const db = openDatabase('.data/game.sqlite'), port = Number(process.env.PORT || 4318), root = resolve('public');
 const types = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml', '.webp': 'image/webp' };
-const env = { ...process.env, DB: db, ASSETS: { async fetch(req) { const url = new URL(req.url); let path = resolve(root, '.' + decodeURIComponent(url.pathname)); if (url.pathname.endsWith('/')) path = resolve(path, 'index.html'); if (!path.startsWith(root + sep)) return new Response('Forbidden', { status: 403 }); try { return new Response(await readFile(path), { headers: { 'Content-Type': types[extname(path)] || 'application/octet-stream' } }); } catch { return new Response('Not found', { status: 404 }); } } } };
+const env = { ...process.env, TRUST_PLATFORM_IDENTITY: 'true', DB: db, ASSETS: { async fetch(req) { const url = new URL(req.url); let path = resolve(root, '.' + decodeURIComponent(url.pathname)); if (url.pathname.endsWith('/')) path = resolve(path, 'index.html'); if (!path.startsWith(root + sep)) return new Response('Forbidden', { status: 403 }); try { return new Response(await readFile(path), { headers: { 'Content-Type': types[extname(path)] || 'application/octet-stream' } }); } catch { return new Response('Not found', { status: 404 }); } } } };
 const server = http.createServer(async (req, res) => {
   try {
     const headers = new Headers(req.headers); headers.set('oai-authenticated-user-id', 'local-preview');

@@ -1,5 +1,9 @@
 # 羊年大吉：手机前端与链下游戏后端
 
+## Cloudflare 后台（2026-09-18）
+
+[打开云端后台体验版](https://sheep-fortune-game.lingolayer.workers.dev/)；运行 Workers + D1。钱包登录、转盘结算、金元宝及推荐接口已部署，真实充值、提现与真实游戏关闭。试玩账户不产生推荐返佣。[部署与验证步骤](docs/Cloudflare部署.md)。
+
 主站现在使用红金色手机界面；`public/folio`、`public/signal`、`public/orbit` 保留之前三个静态风格样稿，仅作历史设计参考，未接入正式账户。
 
 ## 启动
