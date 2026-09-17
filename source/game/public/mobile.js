@@ -1,9 +1,10 @@
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './shared/wallet-network.js';
 import { accountFeatures } from './shared/account-features.js';
 import { createWheel, buildWheelSegments, landingIndex } from './wheel.js?v=6';
 import { sectorText, resultText } from './outcome-view.js?v=5';
 const $ = id => document.getElementById(id);
-let config, account, wheel, segments = [], bet = '500', busy = false, toastTimer, drawnVersion, shownIdentity, needsWalletLogin = false;
-const features=accountFeatures({api,mutate,account:()=>account,config:()=>config,refresh,openDialog,notice,canOperate:()=>!!account&&!needsWalletLogin&&!busy});
+let config, account, wheel, segments = [], bet = '500', busy = false, toastTimer, drawnVersion, shownIdentity, needsWalletLogin = false, needsBscNetwork = false, watchedWallet;
+const features=accountFeatures({api,mutate,account:()=>account,config:()=>config,refresh,openDialog,notice,canOperate:()=>!!account&&!needsWalletLogin&&!needsBscNetwork&&!busy});
 const pendingName = 'sheep-pending-v1';
 const money = value => {
   const [whole, fraction = ''] = String(value ?? '0').split('.');
@@ -27,6 +28,7 @@ function identity() { return account?.wallet || 'demo'; }
 async function mutate(path, data = {}) {
   const previous = getPending();
   if (previous && (previous.path !== path || previous.owner !== identity())) throw new Error('请先重试上次未确认的操作');
+  if (account?.mode === 'token') await bscWallet(window.ethereum, { expectedAddress: account.wallet });
   const operation = previous || { path, data, key: crypto.randomUUID(), owner: identity() };
   savePending(operation);
   try { const result = await api(operation.path, operation.data, operation.key); savePending(null); return result; }
@@ -56,14 +58,17 @@ function render() {
   text('mode-banner', demo ? '体验版 · 使用测试币，不能提现' : config.payments.enabled ? '正式账户 · BSC ' + config.payments.symbol : '正式账户尚未开放 · 可返回测试体验');
   text('account-description', demo ? '测试币用于体验玩法' : account.benefits?.whitelisted ? '白名单账户 · 专属概率 · 免提现手续费' : '游戏余额与钱包余额分开显示');
   text('wallet-address', account.wallet || '当前使用测试账户');
-  $('wallet-connect').firstElementChild.textContent = needsWalletLogin ? '重新连接钱包' : demo ? '连接钱包' : '返回测试体验';
+  $('wallet-connect').firstElementChild.textContent = needsWalletLogin ? '重新连接钱包' : needsBscNetwork && !demo ? '切换到 BSC' : demo ? '连接钱包' : '返回测试体验';
   text('bet-note', `每局最低 ${money(config.rules.minBet)} 币 · 当前上限 ${money(account.maxBet)} 币`);
   text('pool-note', '服务器奖池余额 ' + money(account.pool) + (demo ? ' 测试币' : ' ' + config.payments.symbol));
-  $('start').disabled = busy || needsWalletLogin || (pending ? pending.path !== '/play' : Number(account.balance) < Number(bet) || Number(account.maxBet) < Number(bet) || (!demo && !config.payments.enabled));
+  $('start').disabled = busy || needsWalletLogin || (!demo && needsBscNetwork) || (pending ? pending.path !== '/play' : Number(account.balance) < Number(bet) || Number(account.maxBet) < Number(bet) || (!demo && !config.payments.enabled));
   $('start').firstElementChild.textContent = busy ? '正在处理，请稍候' : pending?.path === '/play' ? '查看上次结果' : '转一下';
   text('start-cost', '本局投入 ' + money(pending?.path === '/play' ? pending.data.amount : bet) + ' 币');
   for (const button of document.querySelectorAll('#bet-choices button, #wallet-connect, #deposit-open, #withdraw-open, #withdraw-shortcut')) button.disabled = busy || !!pending;
   $('connection-message').replaceChildren();
+  if (!demo && needsBscNetwork) {
+    $('connection-message').append(el('p', '请将钱包切换到 BSC 主网后继续。'), button('切换到 BSC 主网', switchNetwork));
+  }
   if (pending) {
     const line = document.createElement('p'); line.textContent = '上次操作还未确认，请先重试。';
     const retry = document.createElement('button'); retry.className = 'dialog-primary'; retry.textContent = '核对上次操作'; retry.disabled = busy; retry.onclick = retryPending;
@@ -133,6 +138,7 @@ async function showRound(round) {
 }
 async function start() {
   if (busy) return;
+  if (account?.mode === 'token' && needsBscNetwork) return switchNetwork();
   if (needsWalletLogin) return notice('钱包已切换，请重新签名登录');
   if(features.offerReferral())return;
   setBusy(true); wheel.clear(); $('round-total').hidden = true; $('wheel-stage').classList.remove('has-result'); $('wheel-stage').classList.add('is-resolving');
@@ -162,20 +168,47 @@ async function loadIngots() {
   if(!result.records.length)$('ingot-records').append(el('p','还没有金元宝记录','empty-note'));
   for(const round of result.records){const row=el('article',undefined,'record-row'),left=el('div'),right=el('div');left.append(el('strong',round.multiplierBps===0?'谢谢参与':round.multiplierBps/10000+'×'),el('small','投入 '+money(round.bet)+' 币'),el('small',new Date(round.createdAt).toLocaleString('zh-CN',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'})));right.append(el('strong','+'+money(round.ingots),'ingot-history-amount'),el('small','金元宝已到账'));row.append(left,right);$('ingot-records').append(row);}
 }
+
+function watchNetwork() {
+  const provider = window.ethereum;
+  if (!provider?.request || watchedWallet === provider) return;
+  watchedWallet = provider;
+  provider.on?.('chainChanged', chain => {
+    if (account?.mode !== 'token') return;
+    needsBscNetwork = !isBscChain(chain); render();
+    if (needsBscNetwork) notice('当前不是 BSC 主网，请点击“切换到 BSC 主网”');
+  });
+}
+async function checkNetwork() {
+  watchNetwork(); needsBscNetwork = false;
+  if (account?.mode === 'token') {
+    try { needsBscNetwork = !isBscChain(await window.ethereum?.request?.({ method: 'eth_chainId' })); }
+    catch { needsBscNetwork = true; }
+  }
+}
+async function switchNetwork() {
+  if (busy) return;
+  setBusy(true);
+  try { watchNetwork(); await ensureBscNetwork(window.ethereum); await checkNetwork(); notice('已切换到 BSC 主网'); }
+  catch (e) { failure(e); }
+  finally { setBusy(false); }
+}
+
 async function connectWallet() {
+  if (busy) return;
   if (getPending()) return notice('请先核对上次操作');
-  if (account.mode === 'token' && !needsWalletLogin) { try { account = await api('/auth/demo', {}); needsWalletLogin = false; render(); notice('已返回测试体验'); } catch (e) { failure(e); } return; }
+  if (account.mode === 'token' && needsBscNetwork && !needsWalletLogin) return switchNetwork();
+  if (account.mode === 'token' && !needsWalletLogin) { try { account = await api('/auth/demo', {}); needsWalletLogin = false; needsBscNetwork = false; render(); notice('已返回测试体验'); } catch (e) { failure(e); } return; }
   const box = el('div'); box.append(el('p', config.payments.enabled ? '使用钱包签名登录正式账户。签名不会转账或授权代币。' : '正式充值提现尚未开放。可以先签名连接钱包查看账户，正式账户与测试币分开。'));
+  box.append(el('p', '连接时会自动请求切换到 BSC 主网，请在钱包中确认。'));
   box.append(button('连接并签名登录', async () => {
+    if (busy) return;
     if (!window.ethereum?.request) { openDialog('请使用钱包浏览器', '请在支持 BSC 的钱包应用内打开本页，再点击连接钱包。普通浏览器暂不支持扫码连接。'); return; }
     setBusy(true);
     try {
-      const addresses = await window.ethereum.request({ method: 'eth_requestAccounts' }), address = addresses[0];
-      const chain = await window.ethereum.request({ method: 'eth_chainId' }); if (Number(BigInt(chain)) !== 56) await window.ethereum.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: '0x38' }] });
-      const request = await api('/auth/challenge', { address });
-      const messageHex = '0x' + Array.from(new TextEncoder().encode(request.message), x => x.toString(16).padStart(2, '0')).join('');
-      const signature = await window.ethereum.request({ method: 'personal_sign', params: [messageHex, address] });
-      account = await api('/auth/verify', { challengeId: request.challengeId, signature }); needsWalletLogin = false; $('dialog').close(); render(); notice('钱包登录成功'); features.offerReferral();
+      watchNetwork();
+      account = await loginBscWallet(window.ethereum, api); needsWalletLogin = false;
+      await checkNetwork(); $('dialog').close(); render(); notice('钱包已连接 BSC 主网'); features.offerReferral();
     } catch (e) { failure(e.code === 4001 ? new Error('你已取消钱包操作') : e); } finally { setBusy(false); }
   })); openDialog('连接钱包', box);
 }
@@ -249,7 +282,7 @@ async function init() {
     config = await api('/config'); if (!config.rules.outcomes?.length) throw new Error('页面正在更新，请稍后重新连接');
     paintWheel();
     try { account = await api('/account'); } catch (e) { if (e.status !== 401) throw e; account = await api('/auth/demo', {}); }
-    render(); features.offerReferral();
+    await checkNetwork(); render(); features.offerReferral();
   }
   catch (e) { $('connection-message').replaceChildren(el('p', e.message), button('重新连接', init)); }
 }

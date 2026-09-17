@@ -1,3 +1,4 @@
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-ac3b9defab94';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -5,7 +6,7 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-bb2ad7fb8b63',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-ac3b9defab94',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   function sharing(box,code){
@@ -53,11 +54,7 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
   function offerReferral(){if(account()?.mode==='token'&&account()?.referral?.canBind&&pendingInvite()){invite().catch(e=>notice(e.message));return true;}return false;}
   async function connectedWallet(){
     if(!canOperate())throw Error('请重新签名连接当前钱包');
-    if(!window.ethereum?.request)throw Error('请使用钱包浏览器操作');
-    const addresses=await ethereum.request({method:'eth_accounts'}),current=account();
-    if(!addresses[0]||addresses[0].toLowerCase()!==current.wallet?.toLowerCase())throw Error('钱包已切换，请重新签名登录');
-    if(BigInt(await ethereum.request({method:'eth_chainId'}))!==56n)throw Error('请将钱包切换到 BSC 网络');
-    return current.wallet;
+    return bscWallet(window.ethereum,{expectedAddress:account().wallet});
   }
   async function send(transaction){const from=await connectedWallet();return ethereum.request({method:'eth_sendTransaction',params:[{...transaction,from}]});}
   async function waitMined(hash){

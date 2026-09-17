@@ -27,7 +27,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('account-description', v.demo ? '测试币用于体验玩法' : a.benefits?.whitelisted ? '白名单账户 · 专属概率 · 免提现手续费' : '游戏余额与钱包余额分开显示');
       text('wheel-odds', `格子数量不代表中奖概率 · 10× ${(v.config.rules.outcomes.find(o => o.id === 'jackpot')?.weight || 0) * 100 / v.config.rules.weightTotal}%`);
       text('wallet-address', a.wallet || '当前使用测试账户');
-      $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.demo ? '连接钱包' : '返回测试体验';
+      $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.demo ? '连接钱包' : '返回测试体验';
       text('deposit-open', v.demo ? '充测试币' : '充值');
       text('bet-note', `每局最低 ${money(v.config.rules.minBet)} 币 · 当前上限 ${money(a.maxBet)} 币`);
       text('pool-note', '服务器奖池余额 ' + money(a.pool) + ' ' + v.unit);
@@ -36,6 +36,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       $('start').disabled = !v.canPlay; $('start').firstElementChild.textContent = v.startLabel || startLabel; text('start-cost', '本局投入 ' + v.startCost + ' 币');
       for (const b of document.querySelectorAll('#bet-choices button, #wallet-connect, #deposit-open, #withdraw-open')) b.disabled = v.lockControls;
       const box = $('connection-message'); box.replaceChildren();
+      if (v.needsBscNetwork) { const retry = el('button', '切换到 BSC 主网', 'dialog-primary'); retry.type = 'button'; retry.disabled = v.busy; retry.onclick = v.switchNetwork; box.append(el('p', '请将钱包切换到 BSC 主网后继续。'), retry); }
       if (v.pending) { box.append(el('p', '上次操作还未确认，请先重试。')); const retry = el('button', '核对上次操作', 'dialog-primary'); retry.type = 'button'; retry.disabled = v.busy; retry.onclick = v.retry; box.append(retry); }
     },
     openDialog, closeDialog, notice,

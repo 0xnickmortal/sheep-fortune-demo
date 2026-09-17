@@ -1,3 +1,4 @@
+import { bscWallet } from './wallet-network.js';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -53,11 +54,7 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
   function offerReferral(){if(account()?.mode==='token'&&account()?.referral?.canBind&&pendingInvite()){invite().catch(e=>notice(e.message));return true;}return false;}
   async function connectedWallet(){
     if(!canOperate())throw Error('请重新签名连接当前钱包');
-    if(!window.ethereum?.request)throw Error('请使用钱包浏览器操作');
-    const addresses=await ethereum.request({method:'eth_accounts'}),current=account();
-    if(!addresses[0]||addresses[0].toLowerCase()!==current.wallet?.toLowerCase())throw Error('钱包已切换，请重新签名登录');
-    if(BigInt(await ethereum.request({method:'eth_chainId'}))!==56n)throw Error('请将钱包切换到 BSC 网络');
-    return current.wallet;
+    return bscWallet(window.ethereum,{expectedAddress:account().wallet});
   }
   async function send(transaction){const from=await connectedWallet();return ethereum.request({method:'eth_sendTransaction',params:[{...transaction,from}]});}
   async function waitMined(hash){
