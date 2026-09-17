@@ -1,0 +1,27 @@
+{
+  "name": "sheep-fortune-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "contracts:build": "forge build",
+    "contracts:test": "forge test",
+    "vault:prepare": "node scripts/prepare-vault-deployment.mjs",
+    "vault:ops": "node scripts/vault-ops.mjs",
+    "pretest": "npm run contracts:build",
+    "test": "node --test tests/*.test.js tests/backend*.test.mjs",
+    "dev": "node scripts/dev-server.mjs",
+    "build": "node scripts/build.mjs",
+    "pretest:backend": "npm run contracts:build",
+    "test:backend": "node --test tests/backend*.test.mjs",
+    "db:generate": "drizzle-kit generate --config drizzle.config.ts"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "5.6.1",
+    "ethers": "^6.17.0"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.10",
+    "drizzle-orm": "^0.45.2",
+    "esbuild": "^0.28.2"
+  }
+}

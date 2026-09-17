@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1789473801863,
+      "tag": "0000_volatile_genesis",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1789483661470,
+      "tag": "0001_overconfident_polaris",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1789493744006,
+      "tag": "0002_soft_anita_blake",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1789635416045,
+      "tag": "0003_left_night_thrasher",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1789637654252,
+      "tag": "0004_swift_spectrum",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1789637835413,
+      "tag": "0005_organic_beast",
+      "breakpoints": true
+    }
+  ]
+}

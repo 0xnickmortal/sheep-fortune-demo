@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="night">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1030">
+<meta name="description" content="福运夜市：羊年大吉手机转盘游戏的夜市灯会版界面。选好筹码，转出你的好运。">
+<title>福运夜市 · 羊年大吉</title>
+<link rel="icon" type="image/png" href="/assets/fortune-sheep.png">
+<link rel="stylesheet" href="/night/style.css?v=1">
+</head>
+<body>
+<div class="sky" aria-hidden="true"><div class="stars"></div><div class="stars stars-2"></div></div>
+<div class="shell">
+<header class="top">
+  <a class="brand" href="/night/"><span class="brand-main">福运夜市</span><span class="brand-sub" id="mode-banner">正在连接游戏账户…</span></a>
+  <div class="top-actions"><button id="sound" class="icon-btn" aria-label="关闭音效" aria-pressed="true">♪</button><button id="rules-open" class="pill-btn">玩法</button></div>
+</header>
+<main>
+<section id="play-view" class="view" aria-labelledby="play-title">
+  <div class="hud">
+    <button class="pouch pouch-coin" data-tab="account"><span class="pouch-icon" aria-hidden="true">币</span><span class="pouch-body"><small>余额 · <em id="coin-unit">测试币</em></small><strong id="balance">—</strong></span><span class="pouch-arrow" aria-hidden="true">›</span></button>
+    <button class="pouch pouch-ingot" data-tab="rewards"><span class="pouch-icon" aria-hidden="true">宝</span><span class="pouch-body"><small>金元宝</small><strong id="ingots-inline">—</strong></span><span class="pouch-arrow" aria-hidden="true">›</span></button>
+  </div>
+  <div class="stage-card">
+    <div class="lantern-row" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+    <h1 id="play-title" class="marquee"><span>✦</span>好运转起来<span>✦</span></h1>
+    <div class="stage" id="wheel-stage" role="img" aria-label="幸运转盘">
+      <div class="rim"><div class="rotor" id="wheel-rotor"></div></div>
+      <div class="hub" aria-hidden="true"><img id="mascot" src="/assets/fortune-sheep.png" alt="" width="1254" height="1254" fetchpriority="high"></div>
+      <div class="pointer" aria-hidden="true"></div>
+    </div>
+    <div class="outcome"><p class="stage-message" id="stage-message" role="status">选好筹码，转出你的好运</p><div class="result" id="result" role="status" hidden></div><div id="connection-message" class="connection" role="status"></div></div>
+  </div>
+  <section class="legend" aria-labelledby="legend-title">
+    <h2 id="legend-title">奖项一览</h2>
+    <ul id="prizes" class="neon-list" aria-label="全部奖项"></ul>
+    <p class="bet-note" id="bet-note">每局最低 500 币</p>
+    <p class="disclosure"><span id="wheel-odds">格子数量不代表中奖概率 · 10× 0.05%</span><br>大于 1× 按本局投入收 5% · 其余免收 · 奖励自动到账<br><button id="wheel-rules" class="link-btn">查看全部概率</button></p>
+  </section>
+</section>
+<section id="rewards-view" class="view page" aria-labelledby="rewards-title" hidden>
+  <div class="page-head"><h1 id="rewards-title">金元宝库</h1><p>抽中 0× 或 0.5× 时，损失的代币按 1:1 变成金元宝</p></div>
+  <div class="vault">
+    <span class="vault-glyph" aria-hidden="true">宝</span>
+    <span id="ingot-mode-label" class="vault-label">测试账户金元宝</span>
+    <strong id="ingot-balance">—</strong>
+    <p>投入 1,000 币：0× 得 1,000 金元宝；0.5× 得 500 金元宝。</p>
+    <button class="ghost-btn" disabled>兑换暂未开放</button>
+    <p class="fine">后续计划支持 XAUT 等奖励，兑换比例与规则待公布。金元宝目前不能提币，也不计入代币余额。</p>
+  </div>
+  <div class="list-head"><h2>最近获取记录</h2><button id="refresh-ingots" class="link-btn">刷新</button></div>
+  <div id="ingot-records" class="records"><p class="empty-note">还没有金元宝记录</p></div>
+</section>
+<section id="account-view" class="view page" aria-labelledby="account-title" hidden>
+  <div class="page-head"><h1 id="account-title">我的账户</h1><p id="account-description">测试币用于体验玩法</p></div>
+  <div class="glass-card account-card">
+    <span>可用余额</span><strong id="account-balance">—</strong>
+    <div class="account-actions"><button id="deposit-open" class="gold-btn">充值</button><button id="withdraw-open" class="ghost-btn">提现</button></div>
+    <div class="account-line"><span>提现处理中</span><b id="locked-balance">0</b></div>
+  </div>
+  <button class="menu-row" id="wallet-connect"><span>连接钱包</span><span aria-hidden="true">›</span></button>
+  <p class="wallet-address" id="wallet-address"></p>
+  <button class="menu-row" id="invite-open"><span>邀请好友 · 推荐奖励</span><span aria-hidden="true">›</span></button>
+  <button class="menu-row" id="payments-open"><span>充值与提现记录</span><span aria-hidden="true">›</span></button>
+  <button class="menu-row" id="rules-account"><span>游戏规则</span><span aria-hidden="true">›</span></button>
+  <p class="fine center">测试币和正式代币账户分开记账。<br>请保管好钱包，勿向任何人提供私钥。</p>
+  <p class="fine center" id="pool-note"></p>
+  <div class="list-head"><h2>最近游戏记录</h2><button id="refresh-records" class="link-btn">刷新</button></div>
+  <div id="records" class="records"><p class="empty-note">还没有游戏记录</p></div>
+  <nav class="skins" aria-label="切换界面风格"><span>换个风格：</span><a href="/">经典红金</a><a href="/night/" aria-current="page">福运夜市</a><a href="/jade/">翡翠麻将馆</a><a href="/red/">红运当头</a></nav>
+</section>
+</main>
+<div class="dock" id="dock"><div class="chips" id="bet-choices">
+      <button class="chip" data-bet="500" aria-pressed="true"><b>500</b><small>币</small></button>
+      <button class="chip" data-bet="1000" aria-pressed="false"><b>1,000</b><small>币</small></button>
+      <button class="chip" data-bet="2000" aria-pressed="false"><b>2,000</b><small>币</small></button>
+      <button class="chip chip-custom" id="custom-bet" aria-pressed="false"><b>自定义</b><small>任意整数</small></button>
+    </div><button id="start" class="spin-btn" disabled><span class="spin-label">转一下</span><small id="start-cost">本局投入 500 币</small></button></div>
+<nav class="stalls" aria-label="主要功能">
+  <button data-tab="play" class="active" aria-current="page"><i class="stall-lamp" aria-hidden="true"></i><span>玩游戏</span></button>
+  <button data-tab="rewards"><i class="stall-lamp" aria-hidden="true"></i><span>金元宝</span></button>
+  <button data-tab="account"><i class="stall-lamp" aria-hidden="true"></i><span>我的账户</span></button>
+</nav>
+</div>
+<dialog id="dialog" aria-labelledby="dialog-title"><header><h2 id="dialog-title"></h2><button id="dialog-close" aria-label="关闭弹窗">×</button></header><div id="dialog-content"></div></dialog>
+<div class="toast" id="toast" role="status" hidden></div>
+<script type="module" src="/night/app.js?v=1"></script>
+</body>
+</html>

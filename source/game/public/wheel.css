@@ -1,0 +1,44 @@
+.game-board.wheel-board{padding:18px 12px 20px;overflow:visible;background:radial-gradient(ellipse at 50% 35%,#e44643,#be2531 70%,#a21627);border-radius:28px}.wheel-board .board-heading h1{font-size:25px;letter-spacing:.05em}.wheel-board .board-heading p{font-size:14px;letter-spacing:.18em;margin-bottom:5px}.wheel-stage{width:min(100%,350px);aspect-ratio:1;margin:15px auto 0;position:relative;padding:9px;isolation:isolate;border-radius:50%;background:linear-gradient(135deg,#ffe9a7,#cb882f 50%,#ffdf8b 72%,#e7af53);box-shadow:0 7px 0 #82131f,0 12px 22px #72111d66,inset 0 0 0 2px #fff3bf}.wheel-rotor{width:100%;height:100%;border:2px solid #a44420;border-radius:50%;background:#f5c675;overflow:hidden;will-change:transform;box-shadow:inset 0 0 0 4px #ffc969}.wheel-rotor svg{width:100%;height:100%;display:block}.wheel-sector path{fill:#fff0cc;stroke:#e4b768;stroke-width:1.2}.wheel-sector-red path{fill:#b82634}.wheel-label{font-family:inherit;font-size:23px;font-weight:800;fill:#982331;letter-spacing:-.5px}.wheel-sector-red .wheel-label{fill:#fff0c2}.wheel-detail{font-family:inherit;font-size:14px;font-weight:550;fill:#97552e}.wheel-sector-red .wheel-detail{fill:#ffe1a0}.wheel-sector.landed path{fill:#ffda7b;stroke:#fff8cf;stroke-width:3}.wheel-sector.landed .wheel-label,.wheel-sector.landed .wheel-detail{fill:#9a1525}.wheel-hub{position:absolute;inset:32%;display:grid;place-items:center;border:5px solid #f4c968;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff9df,#ffe9b5);z-index:3;box-shadow:0 3px 12px #65201550,inset 0 0 0 2px #c9973f;pointer-events:none}.wheel-hub img{width:114%;height:114%;max-width:none;object-fit:contain;filter:drop-shadow(0 3px 2px #ae612422)}.wheel-pointer{position:absolute;left:50%;top:-9px;transform:translateX(-50%);width:31px;height:41px;z-index:5;filter:drop-shadow(0 3px 2px #68220f70)}.wheel-pointer::before{content:"";position:absolute;inset:0;background:#fff3bf;clip-path:polygon(0 0,100% 0,100% 27%,50% 100%,0 27%)}.wheel-pointer::after{content:"";position:absolute;inset:3px 4px 6px;background:#dca039;clip-path:polygon(0 0,100% 0,100% 25%,50% 100%,0 25%)}.wheel-board .stage-message{margin-top:18px;font-size:17px}.wheel-stage.is-resolving .wheel-hub{animation:wheel-breathe 1s ease-in-out infinite}.wheel-stage.has-result{box-shadow:0 7px 0 #82131f,0 0 25px #ffdc8c88,inset 0 0 0 2px #fff3bf}.wheel-board .round-total{margin:14px 5px 0;background:#fff4d5}.wheel-board .round-total strong{font-size:31px;line-height:1.45}.wheel-board .round-total p{margin:5px 0 0}.wheel-result-multiplier{font-size:17px;font-weight:650}.wheel-note{margin:13px 0 0;font-size:14px;color:#ffdcaf;line-height:1.5}.wheel-note button{font-size:inherit;color:inherit;text-decoration:underline;background:transparent;min-height:44px;padding:6px}.bet-panel .start-button{margin-bottom:18px}.wheel-result-details{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:10px;font-size:15px;color:#8e5040}.wheel-result-details b{display:block;color:#781d26;font-size:18px}@keyframes wheel-breathe{50%{transform:scale(.96)}}@media(max-width:360px){.game-board.wheel-board{padding:14px 8px 18px}.wheel-board .board-heading h1{font-size:23px}.wheel-stage{margin-top:13px}.wheel-label{font-size:22px}}@media(prefers-reduced-motion:reduce){.wheel-stage.is-resolving .wheel-hub{animation:none}}
+.wheel-probability-table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;margin:14px 0 18px}.wheel-probability-table th,.wheel-probability-table td{padding:10px 14px;border-bottom:1px solid #e4c49c;text-align:left}.wheel-probability-table th{background:#fae6c7}
+/* Keep the main game action within reach on short mobile screens. */
+#play-view{padding-bottom:105px}.spin-action{position:fixed;z-index:9;left:50%;bottom:calc(80px + env(safe-area-inset-bottom));transform:translateX(-50%);width:min(100%,520px);padding:12px 15px 10px;background:linear-gradient(#fff2dcf2,#fff2dc);border-top:1px solid #ead0aa;box-shadow:0 -5px 16px #6b12200d}.bet-panel .spin-action .start-button{margin:0;min-height:76px}.wheel-stage{max-width:320px}@media(max-height:800px){.wheel-stage{max-width:275px}.wheel-board .board-heading p{display:none}.game-board.wheel-board{padding-top:14px;padding-bottom:12px}.wheel-board .stage-message{margin-top:12px}.wheel-note{margin-top:5px}.wheel-label{font-size:26px}.wheel-detail{font-size:16px}}
+
+.wheel-sector-jackpot path{fill:#fbd17d}.wheel-sector-jackpot .wheel-label{fill:#881826}.wheel-sector-empty path{fill:#f3e7ce}.wheel-sector-empty .wheel-label{fill:#88573f}.wheel-sector-empty.landed path{fill:#f3e7ce;stroke:#d6ab76}.wheel-sector-empty.landed .wheel-label{fill:#88573f}
+
+/* Dense physical-wheel layout: short radial labels; full names appear in the bottom instructions. */
+.wheel-stage{width:min(100%,360px);max-width:360px;padding:7px}
+.wheel-dense .wheel-sector path{stroke:#d49947;stroke-width:1.1}
+.wheel-dense .wheel-label{font-size:24px;letter-spacing:0;font-weight:800;fill:#922638}
+.wheel-dense .wheel-tone-payout path{fill:#fff0cb}
+.wheel-dense .wheel-tone-payout .wheel-label{fill:#922638}
+.wheel-dense .wheel-tone-replay path{fill:#7d1728}
+.wheel-dense .wheel-tone-replay .wheel-label{fill:#fff1c9;font-size:22px}
+.wheel-dense .wheel-tone-win path{fill:#ca2738}
+.wheel-dense .wheel-tone-win .wheel-label{fill:#fff1c9}
+.wheel-dense .wheel-tone-bonus path{fill:#e8ad42}
+.wheel-dense .wheel-tone-bonus .wheel-label{fill:#6c1826}
+.wheel-dense .wheel-tone-jackpot path{fill:#ffde72;stroke:#fff4c3;stroke-width:1.8}
+.wheel-dense .wheel-tone-jackpot .wheel-label{fill:#6c1826;font-size:27px}
+.wheel-dense .wheel-tone-empty path{fill:#e2d4b9}
+.wheel-dense .wheel-tone-empty .wheel-label{fill:#654435;font-size:22px}
+.wheel-dense .wheel-sector.landed path{stroke:#fff9e7;stroke-width:2.8;filter:brightness(1.12)}
+.wheel-peg{fill:#fff0b3;stroke:#b98138;stroke-width:.9}
+.wheel-prizes{list-style:none;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin:16px 3px 0;padding:0}
+.wheel-prize{font-size:16px;font-weight:650;line-height:1.45;padding:4px 3px;border:1px solid #ffda8c66;border-radius:7px;color:#ffefc3;background:#86152450;overflow-wrap:anywhere}
+.wheel-prize-jackpot,.wheel-prize-bonus{background:#ffe0a2;color:#721e29;border-color:#ffeab9}
+.wheel-prize-empty{color:#ffe4c2;background:#a7202f}
+.wheel-board .stage-message{font-size:18px;margin-top:12px}
+.wheel-note{font-size:14px;line-height:1.65;margin-top:8px;color:#ffe8c5}
+.wheel-note span{font-size:14px}
+.wheel-note button{font-size:16px;padding:5px 10px}
+@media(max-width:360px){.wheel-prizes{margin-top:13px;gap:4px}.wheel-prize{font-size:16px}.game-board.wheel-board{padding-left:6px;padding-right:6px}}
+
+/* Keep the wheel clear; prize names and terms live below the play controls. */
+.game-instructions{margin:24px 2px 0;padding-top:20px;border-top:1px solid #e7cba1;text-align:left}
+.game-instructions h2{margin:0 0 14px;font-size:20px;color:#642b24}
+.game-instructions .wheel-prizes{margin:0;gap:7px}
+.game-instructions .wheel-prize{padding:8px 3px;text-align:center;background:#fff9ef;border-color:#e7cba1;color:#8b3c2e}
+.game-instructions .wheel-prize-bonus,.game-instructions .wheel-prize-jackpot{background:#ffe0a2;border-color:#e7c078;color:#721e29}
+.game-instructions .wheel-note{margin:14px 0 0;color:#825446;font-size:16px;line-height:1.8}
+.game-instructions .wheel-note span{font-size:inherit}
+.game-instructions .wheel-note button{padding:6px 0;color:#a21322;font-size:16px}

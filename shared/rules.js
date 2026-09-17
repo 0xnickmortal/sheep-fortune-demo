@@ -1,4 +1,4 @@
-import { MODEL } from './bags.js?v=server-wheel-77-v12-20260917';
+import { MODEL } from './bags.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
 export const UNIT=10n**18n;
 export const WHEEL_OUTCOMES = Object.freeze([
  // displaySlots controls the repeated visual layout only; weight controls draws.
@@ -16,7 +16,7 @@ export const WHEEL_OUTCOMES = Object.freeze([
 export const MAX_PAYOUT_BPS = Math.max(...WHEEL_OUTCOMES.map(o => o.multiplierBps));
 export const ROUND_FEE = Object.freeze({bps:500,basis:'stake',aboveMultiplierBps:10000});
 export const RULES = Object.freeze({
- version:'server-wheel-77-v12-20260917',multiplierBasis:'gross',minBet:'500',maxBet:'50000',
+ version:'server-wheel-77-v13-20260917',multiplierBasis:'gross',minBet:'500',maxBet:'50000',
  poolDivisor:300,jackpotReserveMultiple:3,maxPayoutBps:MAX_PAYOUT_BPS,pauseBelow:'500000',
  roundFee:ROUND_FEE,claimFeeBps:0,replayFeeBps:0,replaySettlement:'return-principal',burnBps:930,subresults:1,scoreDenominator:200,
  rewardSettlement:'auto-balance',ingots:Object.freeze({eligibleMultiplierBps:[0,5000],basis:'stake-minus-net',ratioBps:10000,redemptionEnabled:false}),
@@ -37,7 +37,7 @@ export function drawBag(random=randomBelow){let roll=Number(random(54600n)),idx=
  function ways(rem,last,run){const key=rem.join(',')+'|'+last+'|'+run;if(cache.has(key))return cache.get(key);const pnl=initial.reduce((s,n,i)=>s+(n-rem[i])*delta[i],0);if(pnl< -1400||pnl>1200||run>3)return 0n;if(!rem.some(Boolean))return 1n;let total=0n;for(let i=0;i<5;i++)if(rem[i]){const next=rem.slice();next[i]--;const sign=i<2?-1:1;total+=BigInt(rem[i])*ways(next,sign,sign===last?run+1:1);}cache.set(key,total);return total;}
  let rem=initial.slice(),last=0,run=0;const sequence=[];for(let step=0;step<20;step++){const options=[];let total=0n;for(let i=0;i<5;i++)if(rem[i]){const next=rem.slice();next[i]--;const sign=i<2?-1:1,nr=sign===last?run+1:1,w=BigInt(rem[i])*ways(next,sign,nr);if(w){options.push({i,next,sign,nr,w});total+=w;}}let x=random(total);const o=options.find(o=>{if(x<o.w)return true;x-=o.w;return false;});if(!o)throw new Error('No valid bag sequence');sequence.push([5,8,11,15,20][o.i]);rem=o.next;last=o.sign;run=o.nr;}
  return {score:MODEL.scores[idx],sequence,bag:idx};}
-export function drawWheel(random=randomBelow){let roll=Number(random(BigInt(RULES.weightTotal)));for(const o of WHEEL_OUTCOMES){if(roll<o.weight)return {score:o.multiplierBps/50,sequence:[o.multiplierBps/1000],outcomeId:o.id};roll-=o.weight;}throw new Error('Invalid wheel draw');}
+export function drawWheel(random=randomBelow,rules=RULES){let roll=Number(random(BigInt(rules.weightTotal)));for(const o of rules.outcomes){if(roll<o.weight)return {score:o.multiplierBps/50,sequence:[o.multiplierBps/1000],outcomeId:o.id};roll-=o.weight;}throw new Error('Invalid wheel draw');}
 export function settlement(stake,outcome) {
  const gross=stake*BigInt(outcome.score)/BigInt(RULES.scoreDenominator);
  // Charge once at settlement, on the stake, only when the drawn multiplier exceeds 1x.

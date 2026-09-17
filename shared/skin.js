@@ -1,7 +1,7 @@
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v12-20260917';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
@@ -24,9 +24,10 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('ingot-mode-label', v.demo ? '测试账户金元宝' : '正式账户金元宝');
       text('locked-balance', money(a.locked));
       text('coin-unit', v.unit); text('mode-banner', v.modeText);
-      text('account-description', v.demo ? '测试币用于体验玩法' : '游戏余额与钱包余额分开显示');
+      text('account-description', v.demo ? '测试币用于体验玩法' : a.benefits?.whitelisted ? '白名单账户 · 专属概率 · 免提现手续费' : '游戏余额与钱包余额分开显示');
+      text('wheel-odds', `格子数量不代表中奖概率 · 10× ${(v.config.rules.outcomes.find(o => o.id === 'jackpot')?.weight || 0) * 100 / v.config.rules.weightTotal}%`);
       text('wallet-address', a.wallet || '当前使用测试账户');
-      $('wallet-connect').firstElementChild.textContent = v.demo ? '连接钱包' : '返回测试体验';
+      $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.demo ? '连接钱包' : '返回测试体验';
       text('deposit-open', v.demo ? '充测试币' : '充值');
       text('bet-note', `每局最低 ${money(v.config.rules.minBet)} 币 · 当前上限 ${money(a.maxBet)} 币`);
       text('pool-note', '服务器奖池余额 ' + money(a.pool) + ' ' + v.unit);
@@ -38,6 +39,11 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       if (v.pending) { box.append(el('p', '上次操作还未确认，请先重试。')); const retry = el('button', '核对上次操作', 'dialog-primary'); retry.type = 'button'; retry.disabled = v.busy; retry.onclick = v.retry; box.append(retry); }
     },
     openDialog, closeDialog, notice,
+    resetResult() {
+      stage().classList.remove('has-result', 'result-win', 'result-loss', 'result-even');
+      stage().setAttribute('aria-label', '幸运转盘');
+      message('选好金额，转出你的好运');
+    },
     buildWheel(segments, config) {
       segmentCount = segments.length; rotation = 0;
       const built = buildWheelSvg(segments, { labelRadius: 128 }); groups = built.groups;
@@ -94,6 +100,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
   $('wallet-connect').onclick = () => game.connectWallet();
   $('deposit-open').onclick = () => game.deposit();
   $('withdraw-open').onclick = () => game.withdraw();
+  $('invite-open').onclick=()=>game.invite().catch(e=>notice(e.message));
   $('payments-open').onclick = () => game.payments();
   $('refresh-records').onclick = () => game.loadRecords().catch(e => notice(e.message));
   $('refresh-ingots').onclick = () => game.loadIngots().catch(e => notice(e.message));

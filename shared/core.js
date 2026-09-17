@@ -19,8 +19,9 @@
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v12-20260917';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v12-20260917';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -55,7 +56,7 @@ export function resultKind(round) {
 // The shareable static build marks itself with <meta name="sheep-backend" content="local">
 // and settles rounds in the browser; every other page talks to the real server.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const localApi = LOCAL ? (await import('./local-api.js?v=server-wheel-77-v12-20260917')).localApi : null;
+const localApi = LOCAL ? (await import('./local-api.js?v=server-wheel-77-v13-20260917-bb95541d1aed')).localApi : null;
 export async function api(path, data, key) {
   if (localApi) {
     try { return await localApi(path, data, key); }
@@ -176,7 +177,9 @@ export function spinRotor(rotor, from, to, { duration = 3800, easing = 'cubic-be
 }
 
 export function createGame(ui) {
-  const state = { config: null, account: null, bet: '500', busy: false, segments: [] };
+  const state = { config: null, account: null, bet: '500', busy: false, segments: [], needsWalletLogin: false };
+  let drawnVersion, shownIdentity;
+  const features=accountFeatures({api,mutate,account:()=>state.account,config:()=>state.config,refresh,openDialog:ui.openDialog,notice:ui.notice,canOperate:()=>ready()&&!state.needsWalletLogin&&!state.busy});
   const identity = () => state.account?.wallet || 'demo';
   const failure = e => ui.notice(e.message || '网络暂时断开，请稍后重试');
   async function mutate(path, data = {}) {
@@ -190,10 +193,10 @@ export function createGame(ui) {
   function view() {
     const a = state.account, c = state.config, pending = getPending(), demo = a?.mode === 'demo';
     return {
-      config: c, account: a, bet: state.bet, busy: state.busy, pending, demo, quick: QUICK_BETS,
+      config: c, account: a, bet: state.bet, busy: state.busy, pending, demo, quick: QUICK_BETS, needsWalletLogin: state.needsWalletLogin,
       unit: demo ? '测试币' : c?.payments.symbol || '币',
       modeText: demo ? '体验版 · 使用测试币，不能提现' : c?.payments.enabled ? '正式账户 · BSC ' + c.payments.symbol : '正式账户尚未开放 · 可返回测试体验',
-      canPlay: !!a && !state.busy && (pending ? pending.path === '/play' : Number(a.balance) >= Number(state.bet) && Number(a.maxBet) >= Number(state.bet) && (demo || c.payments.enabled)),
+      canPlay: !!a && !state.needsWalletLogin && !state.busy && (pending ? pending.path === '/play' : Number(a.balance) >= Number(state.bet) && Number(a.maxBet) >= Number(state.bet) && (demo || c.payments.enabled)),
       startLabel: state.busy ? '正在处理，请稍候' : pending?.path === '/play' ? '查看上次结果' : null,
       startCost: money(pending?.path === '/play' ? pending.data.amount : state.bet),
       isCustom: !QUICK_BETS.includes(state.bet),
@@ -201,7 +204,22 @@ export function createGame(ui) {
       retry: retryPending,
     };
   }
-  const render = () => ui.render(view());
+  function render() {
+    if (state.account && shownIdentity !== identity()) {
+      shownIdentity = identity(); drawnVersion = undefined;
+      ui.renderRecords([]); ui.renderIngots({ records: [] }); ui.resetResult?.();
+      loadRecords().catch(failure);
+    }
+    if (state.account?.rules && state.config) {
+      state.config.rules = state.account.rules;
+      if (state.account.withdrawalFee) state.config.payments.withdrawalFee = state.account.withdrawalFee;
+      if (drawnVersion !== state.config.rules.version) {
+        state.segments = buildWheelSegments(state.config.rules.outcomes);
+        ui.buildWheel(state.segments, state.config); drawnVersion = state.config.rules.version;
+      }
+    }
+    ui.render(view());
+  }
   function setBusy(value) { state.busy = value; render(); }
   async function refresh() { const fresh = await api('/account'); if (!state.account || fresh.mode !== state.account.mode || fresh.wallet !== state.account.wallet || fresh.revision >= state.account.revision) state.account = fresh; render(); }
   function button(label, action) { const node = el('button', label, 'dialog-primary'); node.type = 'button'; if (action) node.onclick = action; return node; }
@@ -216,6 +234,7 @@ export function createGame(ui) {
   }
   function rules() {
     const c = state.config, box = el('div', undefined, 'rules');
+    if (state.account?.benefits?.whitelisted) box.append(el('p', '当前钱包适用白名单专属概率，提现手续费全免。以下是本钱包实际使用的概率。'));
     box.append(el('p', '选好金额，点击开始。一次下注只转一次，抽中一个倍率，结算一次奖励。每次至少投入 500 币，可自定义整数金额。'));
     box.append(el('p', '数字倍率表示包含本金、扣费前的返还倍数。抽中大于 1 倍的奖项，在本局结算时收取投入金额的 5%；小于或等于 1 倍不收费。例：投入 500 币，1.2 倍返还 600 币，扣 25 币，实得 575 币；1.5 倍扣 25 币，实得 725 币。'));
     box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需再次点击开始才会下注。'));
@@ -226,7 +245,7 @@ export function createGame(ui) {
       for (const outcome of c.rules.outcomes) { const row = el('tr'); row.append(el('td', sectorText(outcome).label), el('td', outcome.weight * 100 / c.rules.weightTotal + '%')); table.append(row); }
       box.append(table);
       const [lossChance, evenChance, winChance] = c.rules.resultProbabilities;
-      box.append(el('p', `同一奖项在盘面重复出现，格子数量不代表中奖概率；同名奖格按一个奖项计算，合计概率见上表。按当前概率，仅计算游戏内奖励，单次亏损概率为 ${lossChance}%，保本为 ${evenChance}%，盈利为 ${winChance}%；扣除本局手续费后的理论返还率为 ${c.rules.netRtp}。10 倍大奖概率为 0.05%，即两千分之一，不代表每转两千次必定出现一次。`));
+      box.append(el('p', `同一奖项在盘面重复出现，格子数量不代表中奖概率；同名奖格按一个奖项计算，合计概率见上表。按当前概率，仅计算游戏内奖励，单次亏损概率为 ${lossChance}%，保本为 ${evenChance}%，盈利为 ${winChance}%；扣除本局手续费后的理论返还率为 ${c.rules.netRtp}。10 倍大奖概率为 ${(c.rules.outcomes.find(o => o.id === 'jackpot')?.weight || 0) * 100 / c.rules.weightTotal}%，不保证固定次数内必定出现。`));
     }
     box.append(el('p', '这是单次开奖的概率，不保证固定比例的玩家最终盈利，也不保证连续游戏时的本金损失范围。可能连续出现同一个倍率或连续亏损。'));
     box.append(el('p', '本版每次按以上固定概率开奖。投入的 9.3% 记为待销毁额度。'));
@@ -249,6 +268,8 @@ export function createGame(ui) {
   }
   async function start() {
     if (state.busy || !state.account) return;
+    if (state.needsWalletLogin) return ui.notice('钱包已切换，请重新签名登录');
+    if(features.offerReferral())return;
     setBusy(true); ui.beginSpin();
     try {
       const result = await mutate('/play', { amount: state.bet, rulesVersion: state.config.rules.version });
@@ -272,14 +293,14 @@ export function createGame(ui) {
     try { const result = await mutate(pending.path, pending.data); if (pending.path === '/withdrawals') { if (result.fee !== undefined) withdrawalSaved(result); else ui.openDialog('上次提现已确认', '已恢复此前的提现申请，请到充值与提现记录查看数量和进度。'); } await refresh(); ui.notice('上次操作已确认'); }
     catch (e) { failure(e); } finally { setBusy(false); }
   }
-  async function loadRecords() { const result = await api('/rounds'); ui.renderRecords(result.rounds); }
-  async function loadIngots() { await refresh(); const result = await api('/ingots'); if (result.revision >= state.account.revision) { state.account.ingots = result.balance; render(); } ui.renderIngots(result); }
+  async function loadRecords() { const owner = identity(), result = await api('/rounds'); if (owner === identity()) ui.renderRecords(result.rounds); }
+  async function loadIngots() { const owner = identity(); await refresh(); if (owner !== identity()) return; const result = await api('/ingots'); if (owner !== identity()) return; if (result.revision >= state.account.revision) { state.account.ingots = result.balance; render(); } ui.renderIngots(result); }
   function tab(name) { ui.setTab(name); if (name === 'rewards') loadIngots().catch(failure); if (name === 'account') loadRecords().catch(failure); }
   function ready() { if (!state.account || !state.config) { ui.notice('正在连接游戏账户，请稍候'); return false; } return true; }
   async function connectWallet() {
     if (!ready()) return;
     if (getPending()) return ui.notice('请先核对上次操作');
-    if (state.account.mode === 'token') { try { state.account = await api('/auth/demo', {}); render(); ui.notice('已返回测试体验'); } catch (e) { failure(e); } return; }
+    if (state.account.mode === 'token' && !state.needsWalletLogin) { try { state.account = await api('/auth/demo', {}); state.needsWalletLogin = false; render(); ui.notice('已返回测试体验'); } catch (e) { failure(e); } return; }
     const c = state.config, box = el('div');
     box.append(el('p', c.payments.enabled ? '使用钱包签名登录正式账户。签名不会转账或授权代币。' : '正式充值提现尚未开放。可以先签名连接钱包查看账户，正式账户与测试币分开。'));
     box.append(button('连接并签名登录', async () => {
@@ -291,12 +312,13 @@ export function createGame(ui) {
         const request = await api('/auth/challenge', { address });
         const messageHex = '0x' + Array.from(new TextEncoder().encode(request.message), x => x.toString(16).padStart(2, '0')).join('');
         const signature = await window.ethereum.request({ method: 'personal_sign', params: [messageHex, address] });
-        state.account = await api('/auth/verify', { challengeId: request.challengeId, signature }); ui.closeDialog(); render(); ui.notice('钱包登录成功');
+        state.account = await api('/auth/verify', { challengeId: request.challengeId, signature }); state.needsWalletLogin = false; ui.closeDialog(); render(); ui.notice('钱包登录成功'); features.offerReferral();
       } catch (e) { failure(e.code === 4001 ? new Error('你已取消钱包操作') : e); } finally { setBusy(false); }
     }));
     ui.openDialog('连接钱包', box);
   }
   function checkPayments() {
+    if (state.needsWalletLogin) { ui.notice('钱包已切换，请重新签名登录'); return false; }
     if (!state.config.payments.enabled) { ui.openDialog('正式充值提现暂未开放', '现在可以使用测试币体验完整游戏。测试币不可充值或提现，正式资金开通后会在这里显示收款信息。'); return false; }
     if (state.account.mode !== 'token') { ui.openDialog('请先连接钱包', '在“我的账户”连接钱包并签名登录，即可使用正式币账户。'); return false; }
     return true;
@@ -314,16 +336,17 @@ export function createGame(ui) {
     if (!ready()) return;
     if (state.account.mode === 'demo') return demoTopup();
     if (!checkPayments()) return;
+    if(state.config.payments.mode==='vault')return features.deposit();
     const c = state.config, box = el('div');
     box.append(el('p', '仅支持 BSC 网络 ' + c.payments.symbol + '。请从当前登录钱包直接转账到下面地址，再提交交易哈希核对到账。'), el('p', c.payments.depositAddress, 'wallet-address'), el('p', '代币合约：' + c.payments.token, 'wallet-address'), el('p', `需等待 ${c.payments.confirmations} 个区块确认；按实际收到的代币数量入账。`));
     box.append(button('复制充值地址', async () => { try { await navigator.clipboard.writeText(c.payments.depositAddress); ui.notice('已复制'); } catch { ui.notice('请长按地址复制'); } }), button('我已转账，核对到账', () => form('核对充值到账', '粘贴完整交易哈希', '', async txHash => { const result = await mutate('/deposits', { txHash }); await refresh(); ui.openDialog('充值已到账', money(result.amount) + ' 币已进入游戏余额。'); }, { hash: true, submit: '核对到账' })));
     ui.openDialog('充值 ' + c.payments.symbol, box);
   }
-  function withdrawalSaved(result) { ui.openDialog('提现申请已保存', money(result.amount) + ' 币已冻结，其中手续费 ' + money(result.fee) + ' 币，预计转出 ' + money(result.payout) + ' 币至 ' + short(result.recipient) + '。请到充值与提现记录查看进度。'); }
+  function withdrawalSaved(result) { if(result.status==='authorized')return features.withdrawalSaved(result); ui.openDialog('提现申请已保存', money(result.amount) + ' 币已冻结，其中手续费 ' + money(result.fee) + ' 币，预计转出 ' + money(result.payout) + ' 币至 ' + short(result.recipient) + '。请到充值与提现记录查看进度。'); }
   function reviewWithdrawal(quote) {
     const box = el('div', undefined, 'withdrawal-quote'), error = el('p', '', 'form-error'); error.setAttribute('role', 'alert');
     for (const [label, value] of [['申请提现', quote.amount], ['手续费（' + quote.feeBps / 100 + '%）', quote.fee], ['预计转出', quote.payout]]) { const row = el('div', undefined, 'account-line'); row.append(el('span', label), el('b', money(value) + ' 币')); box.append(row); }
-    box.append(el('p', '转入当前钱包 ' + short(quote.recipient) + '。本次提现不收手续费。'));
+    box.append(el('p', '转入当前钱包 ' + short(quote.recipient) + (quote.feeExempt ? '。白名单免提现手续费。' : quote.feeBps === 0 ? '。本次提现不收手续费。' : '。手续费以本次报价为准。')));
     let submitting = false, expired = false;
     const submit = button('确认提现', async () => {
       if (submitting || state.busy) return;
@@ -343,7 +366,7 @@ export function createGame(ui) {
   async function payments() {
     if (!ready()) return;
     try {
-      const result = await api('/payments'), box = el('div'), labels = { queued: '待处理', submitted: '链上确认中', confirmed: '已到账', failed: '交易失败，已退回', rejected: '已退回余额' };
+      const result = await api('/payments'), box = el('div'), labels = { authorized: '待提交合约提现', queued: '待处理', submitted: '链上确认中', confirmed: '已到账', failed: '交易失败，已退回', rejected: '已退回余额' };
       if (!result.deposits.length && !result.withdrawals.length) box.append(el('p', '暂无充值与提现记录'));
       for (const d of result.deposits) box.append(el('p', '充值 +' + money(d.amount) + ' 币 · 已到账', 'payment-row'));
       for (const w of result.withdrawals) {
@@ -351,6 +374,7 @@ export function createGame(ui) {
         row.append(el('p', ['failed', 'rejected'].includes(w.status) ? '申请数量已全额退回，不收手续费' : '手续费 ' + money(w.fee) + ' 币 · ' + (w.status === 'confirmed' ? '已转出 ' : '预计转出 ') + money(w.payout) + ' 币'));
         if (w.tx_hash) { const link = el('a', '查看链上记录'); link.href = 'https://bscscan.com/tx/' + w.tx_hash; link.target = '_blank'; link.rel = 'noopener noreferrer'; row.append(link); }
         if (w.status === 'submitted') row.append(button('核对到账', async () => { try { await mutate('/withdrawals/' + w.id + '/check'); await refresh(); await payments(); } catch (e) { failure(e); render(); } }));
+        row.append(...features.withdrawalActions(w));
         box.append(row);
       }
       ui.openDialog('充值与提现记录', box);
@@ -359,13 +383,18 @@ export function createGame(ui) {
   async function init() {
     try {
       state.config = await api('/config'); if (!state.config.rules.outcomes?.length) throw new Error('页面正在更新，请稍后重新连接');
-      state.segments = buildWheelSegments(state.config.rules.outcomes); ui.buildWheel(state.segments, state.config);
+      state.segments = buildWheelSegments(state.config.rules.outcomes); ui.buildWheel(state.segments, state.config); drawnVersion = state.config.rules.version;
       try { state.account = await api('/account'); } catch (e) { if (e.status !== 401) throw e; state.account = await api('/auth/demo', {}); }
-      render();
+      render(); features.offerReferral();
     } catch (e) { ui.connectionError(e.message, init); }
   }
-  window.ethereum?.on?.('accountsChanged', () => ui.notice('钱包账户已变化，游戏仍显示原登录账户；请重新登录后再充值。'));
-  return { state, init, start, selectBet, customBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, deposit, withdraw, payments, claimReward, view };
+  window.ethereum?.on?.('accountsChanged', addresses => {
+    if (state.account?.mode !== 'token') return;
+    state.needsWalletLogin = addresses?.[0]?.toLowerCase() !== state.account.wallet.toLowerCase();
+    if (state.needsWalletLogin) ui.notice('钱包已切换，请重新签名登录');
+    render();
+  });
+  return { invite:features.invite, state, init, start, selectBet, customBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, deposit, withdraw, payments, claimReward, view };
 }
 
 // Generic record rows shared by both frontends; each theme styles the classes.

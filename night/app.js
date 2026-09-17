@@ -1,5 +1,5 @@
 // 福运夜市 · Night Market skin: labels, flavour text and effects over the shared skin runtime.
-import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v12-20260917';
+import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
 mountSkin({
   navSelector: '.stalls',
   flavor: { jackpot: '大奖来了', bonus: '鸿运当头', win: '小有收获', even: '本金退回', loss: '稍有损失', empty: '谢谢参与' },

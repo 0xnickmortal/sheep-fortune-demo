@@ -1,0 +1,13 @@
+import {randomUUID} from 'node:crypto';
+const [command,value]=process.argv.slice(2),base=process.env.GAME_API_ORIGIN,key=process.env.OPS_AUTH_KEY;
+if(!base||!key||key.length<32)throw Error('Set GAME_API_ORIGIN and server-side OPS_AUTH_KEY');
+const url=new URL(base);if(url.protocol!=='https:'&&!['127.0.0.1','localhost'].includes(url.hostname))throw Error('Use HTTPS');
+const mapping={audit:['GET','/api/admin/audit'],withdrawals:['GET','/api/admin/withdrawals'],burns:['GET','/api/admin/burns'],fund:['POST','/api/admin/treasury/fund',{txHash:value}], 'burn-prepare':['POST','/api/admin/burns',{amount:value}], 'burn-check':['POST','/api/admin/burns/'+value+'/check',{}], 'withdraw-check':['POST','/api/admin/withdrawals/'+value+'/confirm',{}]};
+if(!mapping[command])throw Error('Commands: audit | withdrawals | burns | fund TX_HASH | burn-prepare AMOUNT | burn-check ID | withdraw-check ID');
+const [method,path,body]=mapping[command];
+if(body&&!value)throw Error('This command requires a value');
+const idempotency=process.env.OPERATION_ID||randomUUID();
+console.error('Operation ID: '+idempotency+' (reuse OPERATION_ID on uncertain retries)');
+const result=await fetch(new URL(path,url),{method,signal:AbortSignal.timeout(30000),headers:{Authorization:'Bearer '+key,'Content-Type':'application/json','Idempotency-Key':idempotency},...(body?{body:JSON.stringify(body)}:{})});
+const data=await result.json();
+console.log(JSON.stringify({operationId:idempotency,status:result.status,...data},null,2));if(!result.ok)process.exitCode=1;
