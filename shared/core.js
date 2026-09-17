@@ -19,8 +19,8 @@
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=6';
-import { sectorText, resultText } from '../outcome-view.js?v=5';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v12-20260917';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v12-20260917';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -55,7 +55,7 @@ export function resultKind(round) {
 // The shareable static build marks itself with <meta name="sheep-backend" content="local">
 // and settles rounds in the browser; every other page talks to the real server.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const localApi = LOCAL ? (await import('./local-api.js')).localApi : null;
+const localApi = LOCAL ? (await import('./local-api.js?v=server-wheel-77-v12-20260917')).localApi : null;
 export async function api(path, data, key) {
   if (localApi) {
     try { return await localApi(path, data, key); }

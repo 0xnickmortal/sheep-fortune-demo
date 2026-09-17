@@ -1,22 +1,22 @@
-import { MODEL } from './bags.js';
+import { MODEL } from './bags.js?v=server-wheel-77-v12-20260917';
 export const UNIT=10n**18n;
 export const WHEEL_OUTCOMES = Object.freeze([
  // displaySlots controls the repeated visual layout only; weight controls draws.
- // E5 table (2026-09-16): two losing outcomes only, 90.0% net return after the round fee.
- Object.freeze({id:'no-prize',title:'谢谢参与',kind:'empty',multiplierBps:0,weight:1744,displaySlots:2}),
- Object.freeze({id:'half',title:'0.5倍返还',kind:'payout',multiplierBps:5000,weight:2241,displaySlots:5}),
- Object.freeze({id:'break-even',title:'1×',kind:'replay',multiplierBps:10000,weight:2000,displaySlots:5}),
- Object.freeze({id:'small-win',title:'小赚',kind:'payout',multiplierBps:12000,weight:2400,displaySlots:6}),
- Object.freeze({id:'one-half',title:'1.5倍奖励',kind:'payout',multiplierBps:15000,weight:900,displaySlots:2}),
- Object.freeze({id:'double',title:'2倍奖励',kind:'payout',multiplierBps:20000,weight:450,displaySlots:1}),
- Object.freeze({id:'triple',title:'3倍奖励',kind:'payout',multiplierBps:30000,weight:200,displaySlots:1}),
- Object.freeze({id:'fivefold',title:'5倍奖励',kind:'payout',multiplierBps:50000,weight:60,displaySlots:1}),
+ // Approved 77% table (2026-09-17): net return after the >1x stake fee.
+ Object.freeze({id:'no-prize',title:'谢谢参与',kind:'empty',multiplierBps:0,weight:2800,displaySlots:2}),
+ Object.freeze({id:'half',title:'0.5倍返还',kind:'payout',multiplierBps:5000,weight:1800,displaySlots:5}),
+ Object.freeze({id:'break-even',title:'1×',kind:'replay',multiplierBps:10000,weight:3800,displaySlots:5}),
+ Object.freeze({id:'small-win',title:'小赚',kind:'payout',multiplierBps:12000,weight:500,displaySlots:6}),
+ Object.freeze({id:'one-half',title:'1.5倍奖励',kind:'payout',multiplierBps:15000,weight:270,displaySlots:2}),
+ Object.freeze({id:'double',title:'2倍奖励',kind:'payout',multiplierBps:20000,weight:500,displaySlots:1}),
+ Object.freeze({id:'triple',title:'3倍奖励',kind:'payout',multiplierBps:30000,weight:300,displaySlots:1}),
+ Object.freeze({id:'fivefold',title:'5倍奖励',kind:'payout',multiplierBps:50000,weight:25,displaySlots:1}),
  Object.freeze({id:'jackpot',title:'大奖',kind:'payout',multiplierBps:100000,weight:5,displaySlots:1}),
 ]);
 export const MAX_PAYOUT_BPS = Math.max(...WHEEL_OUTCOMES.map(o => o.multiplierBps));
 export const ROUND_FEE = Object.freeze({bps:500,basis:'stake',aboveMultiplierBps:10000});
 export const RULES = Object.freeze({
- version:'server-wheel-e5-v11-20260916',multiplierBasis:'gross',minBet:'500',maxBet:'50000',
+ version:'server-wheel-77-v12-20260917',multiplierBasis:'gross',minBet:'500',maxBet:'50000',
  poolDivisor:300,jackpotReserveMultiple:3,maxPayoutBps:MAX_PAYOUT_BPS,pauseBelow:'500000',
  roundFee:ROUND_FEE,claimFeeBps:0,replayFeeBps:0,replaySettlement:'return-principal',burnBps:930,subresults:1,scoreDenominator:200,
  rewardSettlement:'auto-balance',ingots:Object.freeze({eligibleMultiplierBps:[0,5000],basis:'stake-minus-net',ratioBps:10000,redemptionEnabled:false}),
