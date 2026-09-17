@@ -2,6 +2,7 @@ import { build } from 'esbuild';
 import { cp, mkdir, rm, writeFile, readFile } from 'node:fs/promises';
 import { RULES } from '../server/rules.js';
 import { versionAssets } from './version-assets.mjs';
+import { serverSkinPage } from './frontend-entry.mjs';
 const cloudflare = process.argv.includes('--cloudflare');
 if (!cloudflare) {
  const hosting = JSON.parse(await readFile('.openai/hosting.json', 'utf8'));
@@ -11,6 +12,11 @@ await rm('dist', { recursive: true, force: true });
 await mkdir('dist/server', { recursive: true });
 if (!cloudflare) await mkdir('dist/.openai', { recursive: true });
 await cp('public', 'dist/client', { recursive: true });
+for (const skin of ['red', 'night', 'jade']) {
+ const html = serverSkinPage(await readFile(`public/${skin}/index.html`, 'utf8'));
+ await writeFile(`dist/client/${skin}/index.html`, html);
+ if (skin === 'red') await writeFile('dist/client/index.html', html);
+}
 await versionAssets('dist/client', RULES.version);
 await build({ entryPoints: ['server/worker.js'], outfile: 'dist/server/index.js', bundle: true, format: 'esm', platform: 'browser', target: 'es2022', minify: true, legalComments: 'eof' });
 if (!cloudflare) {

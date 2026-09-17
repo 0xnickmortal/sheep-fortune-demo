@@ -2,6 +2,8 @@
 
 后台使用 Cloudflare Workers，数据库使用 D1；同一 Worker 同时提供手机页面及 `/api/*`，无需跨站 Cookie 或放宽跨域策略。GitHub Pages 仍为独立静态试玩。
 
+首页统一使用 GitHub 上的“红运当头”界面：`public/red/index.html` 是共同模板，服务端构建由 `scripts/frontend-entry.mjs` 处理入口链接并生成根目录首页；本地预览同样使用此模板。Cloudflare 继续调用真实后台 API，不带 GitHub 静态试玩的本地结算标记。
+
 ## 本次配置
 
 - 地址：https://sheep-fortune-game.lingolayer.workers.dev/
