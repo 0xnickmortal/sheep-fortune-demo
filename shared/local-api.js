@@ -2,7 +2,7 @@
 // build (dist-share). It applies the same published rules as the server
 // (rules.js is copied from server/rules.js at build time) and keeps test
 // coins in this browser only. Nothing here touches wallets or real funds.
-import { RULES, WHEEL_OUTCOMES, units, formatAmount, parseAmount, maxBet, maximumPayout, settlement, ingotAward, drawWheel } from './rules.js?v=server-wheel-77-v13-20260917-bb95541d1aed';
+import { RULES, WHEEL_OUTCOMES, units, formatAmount, parseAmount, maxBet, maximumPayout, settlement, ingotAward, drawWheel } from './rules.js?v=server-wheel-77-v13-20260917-bb2ad7fb8b63';
 const STORE = 'sheep-share-demo-v1';
 const PAYMENTS = Object.freeze({ enabled: false, chainId: 56, token: '0x61bEcda3b07301889b51Fd84b0E58385311590ba', symbol: 'TST', decimals: 18, withdrawalFee: { bps: 0, version: 'withdrawal-no-fee-v2-20260915' }, depositAddress: null, confirmations: 20 });
 const fail = (message, status = 400, code = 'INVALID_REQUEST') => { throw Object.assign(new Error(message), { status, code }); };

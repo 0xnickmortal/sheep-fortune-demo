@@ -5,18 +5,29 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-bb95541d1aed',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-bb2ad7fb8b63',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
+  function sharing(box,code){
+    const trial=!code,url=new URL(location.href);url.search='';url.hash='';if(code)url.searchParams.set('ref',code);
+    const label=el('label',trial?'试玩分享链接':'我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);label.append(input);box.append(label);
+    box.append(button(trial?'复制试玩链接':'复制邀请链接',async()=>{try{await navigator.clipboard.writeText(url.href);notice(trial?'试玩链接已复制':'邀请链接已复制');}catch{input.focus();input.select();notice('请长按链接复制');}}));
+    if(navigator.share)box.append(button('分享给好友',async()=>{try{await navigator.share({title:trial?'羊年大吉 · 一起来试玩':'羊年大吉 · 邀请好友',url:url.href});}catch(e){if(e.name!=='AbortError')throw e;}}));
+  }
   async function invite(){
     const box=el('div',undefined,'invite-center');let data;
-    if(document.querySelector('meta[name="sheep-backend"][content="local"]'))data={supported:false,message:'当前是本机试玩。推荐链接、邀请关系和奖励将在连接正式后端后开放。'};
+    if(document.querySelector('meta[name="sheep-backend"][content="local"]'))data={supported:false,message:'当前为试玩版，正式邀请返佣尚未开放。'};
     else data=await api('/referrals');
     box.append(el('p','邀请好友，一起转出好运','invite-lead'));
+    if(!data.supported){
+      box.append(el('p','先把游戏发给朋友，一起试玩。'));
+      sharing(box);
+      box.append(el('p','试玩链接不绑定推荐关系、不计返佣。','invite-hint'),el('p',data.message));
+      openDialog('邀请好友',box);return;
+    }
     const stats=el('div',undefined,'invite-stats');
     for(const [label,value] of [['直推奖励',(data.policy?.directBps??1500)/100+'%'],['间推奖励',(data.policy?.indirectBps??500)/100+'%']]){const card=el('div');card.append(el('small',label),el('strong',value));stats.append(card);}box.append(stats);
     box.append(el('p','按好友每局实际下注额计算，各倍率均计提；奖励自动进入游戏余额，无需手动领取。'));
-    if(!data.supported){box.append(el('p',data.message));openDialog('邀请好友',box);return;}
     if(data.parent)box.append(el('p','我的邀请人：'+short(data.parent)));
     if(data.canBind){
       const label=el('label','邀请码（可选）'),input=el('input');input.value=pendingInvite();input.placeholder='粘贴好友的邀请码';input.autocomplete='off';input.maxLength=24;label.append(input);box.append(label);
@@ -28,10 +39,7 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
       if(pendingInvite())box.append(button('不绑定，继续游戏',()=>{clearInvite();document.querySelector('dialog').close();}));
     }else if(!data.parent)box.append(el('p','首次游戏已完成，未绑定邀请人。'));
     if(data.active){
-      const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('ref',data.code);
-      const input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label','我的邀请链接');box.append(input);
-      box.append(button('复制邀请链接',async()=>{try{await navigator.clipboard.writeText(url.href);notice('邀请链接已复制');}catch{input.focus();input.select();notice('请长按链接复制');}}));
-      if(navigator.share)box.append(button('分享给好友',()=>navigator.share({title:'羊年大吉 · 邀请好友',url:url.href})));
+      sharing(box,data.code);
     }else if(data.eligible)box.append(button('生成我的邀请链接',async()=>{if(!canOperate())return;await mutate('/referrals/activate',{});await refresh();await invite();}));
     else box.append(el('p','完成一局游戏后，即可生成自己的邀请链接。','invite-hint'));
     box.append(el('h3','我的邀请与奖励'));
