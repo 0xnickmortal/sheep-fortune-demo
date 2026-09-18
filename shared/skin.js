@@ -1,7 +1,8 @@
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-c22646709831';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-f116db43bfca';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
@@ -26,6 +27,19 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('coin-unit', v.unit); text('mode-banner', v.modeText);
       text('account-description', v.guest ? '连接钱包后查看余额' : a.benefits?.whitelisted ? '专属游戏配置 · 免提现手续费' : '游戏余额与钱包余额分开显示');
       text('wallet-address', a.wallet || '尚未连接钱包');
+      const connected = !v.guest && !v.needsWalletLogin && !v.needsBscNetwork;
+      const holdings = v.walletBalance;
+      const walletLabel = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : a.wallet.slice(0, 6) + '…' + a.wallet.slice(-4);
+      const holdingLabel = !connected ? '查看持币数量' : holdings.value !== null ? '持有 ' + compactTokenBalance(holdings.value) + ' 枚' : holdings.status === 'error' ? '余额暂不可用' : '正在读取余额…';
+      text('wallet-top-label', walletLabel); text('wallet-top-balance', holdingLabel);
+      const topWallet = $('wallet-top');
+      if (topWallet) {
+        topWallet.classList.toggle('connected', connected);
+        topWallet.setAttribute('aria-label', connected ? '我的钱包 ' + a.wallet + '，' + holdingLabel + ' ' + v.unit : walletLabel);
+        topWallet.title = connected && holdings.value !== null ? v.unit + '：' + money(holdings.value) + ' 枚' : walletLabel;
+        topWallet.disabled = v.busy;
+      }
+      text('wallet-balance-detail', !connected ? '请重新连接 BSC 钱包' : holdings.value !== null ? money(holdings.value) + ' 枚' : holdings.status === 'error' ? '读取失败，请点击刷新重试' : '正在读取…');
       $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : '重新连接钱包';
       text('deposit-open', '充值');
       if ($('admin-entry')) $('admin-entry').hidden = !a.admin;
@@ -96,6 +110,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
   $('dialog-close').onclick = closeDialog;
   $('dialog').addEventListener('click', e => { if (e.target === $('dialog')) closeDialog(); });
   $('wallet-connect').onclick = () => game.connectWallet();
+  if ($('wallet-top')) $('wallet-top').onclick = () => game.connectWallet();
   $('deposit-open').onclick = () => game.deposit();
   $('withdraw-open').onclick = () => game.withdraw();
   $('invite-open').onclick=()=>game.invite().catch(e=>notice(e.message));

@@ -58,3 +58,38 @@ export async function loginBscWallet(provider, api) {
   if (current?.toLowerCase() !== address.toLowerCase()) throw new Error('钱包已切换，请重新签名登录');
   return api('/auth/verify', { challengeId: challenge.challengeId, signature });
 }
+
+// Read-only: never request signing, permissions or a network switch while polling.
+export async function readWalletTokenBalance(provider, { address, token, decimals }) {
+  const validAddress = value => /^0x[\da-f]{40}$/i.test(value || '') && !/^0x0{40}$/i.test(value);
+  if (!validAddress(address) || !validAddress(token) || !Number.isInteger(decimals) || decimals < 0 || decimals > 255) throw Error('代币信息暂不可用');
+  if (!provider?.request) throw Error('钱包尚未连接');
+  const check = async () => {
+    if (!isBscChain(await provider.request({ method: 'eth_chainId' }))) throw Error('请切换到 BSC 主网');
+    const accounts = await provider.request({ method: 'eth_accounts' });
+    if (accounts?.[0]?.toLowerCase() !== address.toLowerCase()) throw Error('钱包已切换，请重新连接');
+  };
+  await check();
+  const raw = await provider.request({ method: 'eth_call', params: [{ to: token, data: '0x70a08231' + address.slice(2).toLowerCase().padStart(64, '0') }, 'latest'] });
+  if (!/^0x[\da-f]{64}$/i.test(raw || '')) throw Error('暂时无法读取持币数量');
+  await check();
+  const units = BigInt(raw).toString().padStart(decimals + 1, '0');
+  if (!decimals) return units;
+  const fraction = units.slice(-decimals).replace(/0+$/, '');
+  return units.slice(0, -decimals) + (fraction ? '.' + fraction : '');
+}
+
+// Truncate only the compact display; the wallet dialog retains all decimals.
+export function compactTokenBalance(value) {
+  if (!/^\d+(\.\d+)?$/.test(value || '')) return '—';
+  const [whole, fraction = ''] = value.split('.'), integer = BigInt(whole);
+  const trim = text => text.replace(/\.?0+$/, '');
+  if (integer >= 10000n) {
+    const base = integer >= 100000000n ? 100000000n : 10000n;
+    const hundredths = integer * 100n / base;
+    return trim((hundredths / 100n).toString() + '.' + (hundredths % 100n).toString().padStart(2, '0')) + (base === 10000n ? '万' : '亿');
+  }
+  if (!integer && /[1-9]/.test(fraction) && !/[1-9]/.test(fraction.slice(0, 4))) return '<0.0001';
+  const shortFraction = fraction.slice(0, 4).replace(/0+$/, '');
+  return integer.toString() + (shortFraction ? '.' + shortFraction : '');
+}

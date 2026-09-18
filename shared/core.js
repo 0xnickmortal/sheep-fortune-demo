@@ -1,4 +1,4 @@
-import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-c22646709831';
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-f116db43bfca';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
 // The server decides every result and balance. This module only sends
 // requests, keeps the unconfirmed-operation record, and runs the account
@@ -20,9 +20,9 @@ import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './walle
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-c22646709831';
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-c22646709831';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-c22646709831';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-f116db43bfca';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -56,7 +56,7 @@ export function resultKind(round) {
 
 // Static Pages shows the same interface and sends wallet actions to the game site.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-c22646709831')).RULES : null;
+const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-f116db43bfca')).RULES : null;
 export async function api(path, data, key) {
   if (LOCAL) {
     if (path === '/config') return { rules: staticRules, payments: { enabled: false, symbol: '羊年吉祥' } };
@@ -177,8 +177,9 @@ export function spinRotor(rotor, from, to, { duration = 3800, easing = 'cubic-be
 }
 
 export function createGame(ui) {
-  const state = { config: null, account: null, bet: '500', busy: false, segments: [], needsWalletLogin: false, needsBscNetwork: false };
+  const state = { config: null, account: null, bet: '500', busy: false, segments: [], needsWalletLogin: false, needsBscNetwork: false, walletBalance: { status: 'idle', value: null } };
   let drawnVersion, shownIdentity, watchedWallet;
+  let balanceRequest = 0, balanceUpdatedAt = 0, balanceKey = '';
   const features=accountFeatures({api,mutate,account:()=>state.account,config:()=>state.config,refresh,openDialog:ui.openDialog,notice:ui.notice,canOperate:()=>ready()&&!state.needsWalletLogin&&!state.needsBscNetwork&&!state.busy});
   const identity = () => state.account?.wallet || 'demo';
   const failure = e => ui.notice(e.message || '网络暂时断开，请稍后重试');
@@ -195,7 +196,7 @@ export function createGame(ui) {
   function view() {
     const a = state.account, c = state.config, guest = a?.mode !== 'token', pending = guest ? null : getPending();
     return {
-      config: c, account: a, bet: state.bet, busy: state.busy, pending, guest, quick: QUICK_BETS, needsWalletLogin: state.needsWalletLogin, needsBscNetwork: !guest && state.needsBscNetwork, switchNetwork,
+      config: c, account: a, bet: state.bet, busy: state.busy, pending, guest, quick: QUICK_BETS, needsWalletLogin: state.needsWalletLogin, needsBscNetwork: !guest && state.needsBscNetwork, switchNetwork, walletBalance: state.walletBalance,
       unit: c?.payments.symbol || '币',
       modeText: guest ? '连接钱包，开启好运' : c?.payments.enabled ? 'BSC · ' + c.payments.symbol : '充值提现暂未开放',
       canPlay: !!a && !state.busy && (guest || state.needsWalletLogin || state.needsBscNetwork || (pending ? pending.path === '/play' : c.payments.enabled && Number(a.balance) >= Number(state.bet) && Number(a.maxBet) >= Number(state.bet))),
@@ -224,7 +225,36 @@ export function createGame(ui) {
     ui.render(view());
   }
   function setBusy(value) { state.busy = value; render(); }
-  async function refresh() { const fresh = playerAccount(await api('/account')); if (!state.account || fresh.mode !== state.account.mode || fresh.wallet !== state.account.wallet || fresh.revision >= state.account.revision) state.account = fresh; render(); }
+  async function refresh() { const fresh = playerAccount(await api('/account')); if (!state.account || fresh.mode !== state.account.mode || fresh.wallet !== state.account.wallet || fresh.revision >= state.account.revision) state.account = fresh; render(); void refreshWalletBalance(); }
+  function clearWalletBalance() {
+    balanceRequest++; balanceUpdatedAt = 0; balanceKey = '';
+    state.walletBalance = { status: 'idle', value: null };
+  }
+  async function refreshWalletBalance({ force = false } = {}) {
+    if (!state.config || !state.account || LOCAL) return;
+    if (state.account.mode !== 'token' || state.needsWalletLogin || state.needsBscNetwork) {
+      clearWalletBalance(); render(); return;
+    }
+    const { token, decimals } = state.config.payments, address = state.account.wallet;
+    const key = address.toLowerCase() + ':' + token?.toLowerCase();
+    if (key !== balanceKey) { clearWalletBalance(); balanceKey = key; }
+    if (state.walletBalance.status === 'loading' || (!force && Date.now() - balanceUpdatedAt < 10000)) return;
+    const request = ++balanceRequest;
+    state.walletBalance = { ...state.walletBalance, status: 'loading' }; render();
+    let timer;
+    try {
+      const value = await Promise.race([
+        readWalletTokenBalance(window.ethereum, { address, token, decimals }),
+        new Promise((_, reject) => { timer = setTimeout(() => reject(Error('持币数量读取超时，请重试')), 12000); }),
+      ]);
+      if (request === balanceRequest) state.walletBalance = { status: 'ready', value };
+    } catch (error) {
+      if (request === balanceRequest) state.walletBalance = { status: 'error', value: null, error: error.message };
+    } finally {
+      clearTimeout(timer);
+      if (request === balanceRequest) { balanceUpdatedAt = Date.now(); render(); }
+    }
+  }
   function button(label, action) { const node = el('button', label, 'dialog-primary'); node.type = 'button'; if (action) node.onclick = action; return node; }
   function form(title, label, initial, action, options = {}) {
     const box = el('form', undefined, 'dialog-form'), name = el('label', label), input = el('input');
@@ -298,14 +328,24 @@ export function createGame(ui) {
     watchedWallet = provider;
     provider.on?.('chainChanged', chain => {
       if (state.account?.mode !== 'token') return;
-      state.needsBscNetwork = !isBscChain(chain); render();
+      state.needsBscNetwork = !isBscChain(chain); clearWalletBalance(); render(); void refreshWalletBalance();
       if (state.needsBscNetwork) ui.notice('当前不是 BSC 主网，请点击“切换到 BSC 主网”');
+    });
+    provider.on?.('accountsChanged', addresses => {
+      if (state.account?.mode !== 'token') return;
+      state.needsWalletLogin = addresses?.[0]?.toLowerCase() !== state.account.wallet.toLowerCase();
+      clearWalletBalance(); render(); void refreshWalletBalance();
+      if (state.needsWalletLogin) ui.notice('钱包已切换，请重新签名登录');
     });
   }
   async function checkNetwork() {
     watchNetwork(); state.needsBscNetwork = false;
     if (state.account?.mode === 'token') {
-      try { state.needsBscNetwork = !isBscChain(await window.ethereum?.request?.({ method: 'eth_chainId' })); }
+      try {
+        state.needsBscNetwork = !isBscChain(await window.ethereum?.request?.({ method: 'eth_chainId' }));
+        const accounts = await window.ethereum?.request?.({ method: 'eth_accounts' });
+        state.needsWalletLogin = accounts?.[0]?.toLowerCase() !== state.account.wallet.toLowerCase();
+      }
       catch { state.needsBscNetwork = true; }
     }
   }
@@ -314,7 +354,7 @@ export function createGame(ui) {
     setBusy(true);
     try { watchNetwork(); await ensureBscNetwork(window.ethereum); await checkNetwork(); ui.notice('已切换到 BSC 主网'); }
     catch (e) { failure(e); }
-    finally { setBusy(false); }
+    finally { setBusy(false); void refreshWalletBalance({ force: true }); }
   }
 
   async function connectWallet() {
@@ -328,19 +368,31 @@ export function createGame(ui) {
     if (getPending() && state.account.mode === 'token' && !state.needsWalletLogin) return ui.notice('请先核对上次操作');
     if (state.account.mode === 'token' && state.needsBscNetwork && !state.needsWalletLogin) return switchNetwork();
     const c = state.config, box = el('div');
-    box.append(el('p', c.payments.enabled ? '使用钱包签名登录。签名不会转账或授权代币。' : '充值提现暂未开放。可以先连接钱包查看账户，登录签名不会转账或授权代币。'));
-    box.append(el('p', '连接时会自动请求切换到 BSC 主网，请在钱包中确认。'));
-    box.append(button('连接并签名登录', async () => {
+    const connected = state.account.mode === 'token' && !state.needsWalletLogin;
+    if (connected) {
+      box.append(el('p', state.account.wallet, 'wallet-address'), el('p', '钱包持有 · ' + c.payments.symbol));
+      box.append(el('p', '', 'wallet-holding-detail', { id: 'wallet-balance-detail' }));
+      box.append(el('p', '这里显示钱包中的代币；已充值的代币显示在游戏余额中。'));
+      box.append(button('刷新持币数量', () => refreshWalletBalance({ force: true })));
+      box.append(el('p', '如需切换账户，请先在钱包中切换，再重新连接。'));
+    }
+    if (!connected) {
+      box.append(el('p', c.payments.enabled ? '使用钱包签名登录。签名不会转账或授权代币。' : '充值提现暂未开放。可以先连接钱包查看账户，登录签名不会转账或授权代币。'));
+      box.append(el('p', '连接时会自动请求切换到 BSC 主网，请在钱包中确认。'));
+    }
+    box.append(button(connected ? '重新连接钱包' : '连接并签名登录', async () => {
       if (state.busy) return;
       if (!window.ethereum?.request) { ui.openDialog('请使用钱包浏览器', '请在支持 BSC 的钱包应用内打开本页，再点击连接钱包。普通浏览器暂不支持扫码连接。'); return; }
       setBusy(true);
       try {
         watchNetwork();
-        state.account = await loginBscWallet(window.ethereum, api); state.needsWalletLogin = false;
+        clearWalletBalance(); state.account = await loginBscWallet(window.ethereum, api); state.needsWalletLogin = false;
         await checkNetwork(); ui.closeDialog(); render(); ui.notice('钱包已连接 BSC 主网'); features.offerReferral(); features.resume();
+        void refreshWalletBalance({ force: true });
       } catch (e) { failure(e.code === 4001 ? new Error('你已取消钱包操作') : e); } finally { setBusy(false); }
     }));
-    ui.openDialog('连接钱包', box);
+    ui.openDialog(connected ? '我的钱包' : '连接钱包', box); render();
+    if (connected) void refreshWalletBalance();
   }
   function checkPayments() {
     if (state.account.mode !== 'token') { connectWallet(); return false; }
@@ -403,14 +455,13 @@ export function createGame(ui) {
       try { state.account = playerAccount(await api('/account')); } catch (e) { if (e.status !== 401) throw e; state.account = playerAccount(null); }
       if (getPending()?.owner === 'demo') savePending(null);
       await checkNetwork(); render(); features.offerReferral(); features.resume();
+      void refreshWalletBalance({ force: true });
     } catch (e) { ui.connectionError(e.message, init); }
   }
-  window.ethereum?.on?.('accountsChanged', addresses => {
-    if (state.account?.mode !== 'token') return;
-    state.needsWalletLogin = addresses?.[0]?.toLowerCase() !== state.account.wallet.toLowerCase();
-    if (state.needsWalletLogin) ui.notice('钱包已切换，请重新签名登录');
-    render();
-  });
+  // Read-only refreshes also pick up deposits and withdrawals made outside this tab.
+  setInterval(() => { if (!document.hidden) void refreshWalletBalance(); }, 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshWalletBalance({ force: true }); });
+  window.addEventListener('focus', () => { void refreshWalletBalance(); });
   return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, customBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, deposit, withdraw, payments, claimReward, view };
 }
 
