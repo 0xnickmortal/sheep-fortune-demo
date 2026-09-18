@@ -19,7 +19,7 @@ async function api(path, data, key) {
   try { response = await fetch('/api' + path, { method: data ? 'POST' : 'GET', credentials: 'same-origin', headers: data ? { 'Content-Type': 'application/json', 'X-Game-Request': '1', ...(key ? { 'Idempotency-Key': key } : {}) } : {}, ...(data ? { body: JSON.stringify(data) } : {}) }); }
   catch { throw Object.assign(new Error('网络暂时断开，请点重试；不会重复扣款'), { uncertain: true }); }
   let result; try { result = await response.json(); } catch { throw Object.assign(new Error('暂时无法确认操作，请稍后重试'), { uncertain: true }); }
-  if (!response.ok) throw Object.assign(new Error(result.error || '操作暂未完成'), { status: response.status, code: result.code, uncertain: response.status >= 500 || result.code === 'RETRY_OPERATION' });
+  if (!response.ok) throw Object.assign(new Error(['PROTECTION_CONFIG', 'PROTECTION_STATE'].includes(result.code) ? '游戏暂时无法结算，请稍后重试' : result.error || '操作暂未完成'), { status: response.status, code: result.code, uncertain: response.status >= 500 || result.code === 'RETRY_OPERATION' });
   return result;
 }
 function getPending() { try { return JSON.parse(sessionStorage.getItem(pendingName)) || null; } catch { return null; } }
@@ -112,7 +112,7 @@ function rules() {
   box.append(el('p', '这是单次开奖的概率，不保证固定比例的玩家最终盈利，也不保证连续游戏时的本金损失范围。可能连续出现同一个倍率或连续亏损。'));
   box.append(el('p', '本版每次按以上固定概率开奖。投入的 9.3% 记为待销毁额度。'));
   box.append(el('p', '每局代币返还和金元宝均自动到账，无需手动领取。每一局按抽中的倍率判断手续费，费用按代币最小单位向下取整。提币不收取游戏手续费。金元宝与代币分别记账，不能用于下注或直接提币；兑换尚未开放，后续规则另行公布。'));
-  box.append(el('p', '当前默认使用测试币，测试币不能提现。测试账户金元宝与正式账户分开，不能兑换真实资产。金元宝从新规则启用后累计，历史亏损不补发。'));
+  box.append(el('p', '当前默认使用测试币，测试币不能提现。测试账户金元宝与正式账户分开，不能兑换真实资产。金元宝从新规则启用后累计。'));
   openDialog('转盘玩法', box);
 }
 function selectBet(value) { if (!['500', '1000', '2000', '5000'].includes(value)) return; bet = value; for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === value; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); } render(); }

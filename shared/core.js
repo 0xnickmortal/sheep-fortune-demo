@@ -1,6 +1,5 @@
-import { INTRO_RECOVERY_TERMS, recoveryDetail } from './protection-view.js?v=server-wheel-77-v13-20260917-1ec285117df8';
-import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-1ec285117df8';
-import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-1ec285117df8';
+import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
 // The server decides every result and balance. This module only sends
 // requests, keeps the unconfirmed-operation record, and runs the account
@@ -22,9 +21,9 @@ import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletToke
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-1ec285117df8';
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-1ec285117df8';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-1ec285117df8';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -58,7 +57,7 @@ export function resultKind(round) {
 
 // Static Pages shows the same interface and sends wallet actions to the game site.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-1ec285117df8')).RULES : null;
+const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-f2a9573e22c3')).RULES : null;
 let accountWallet = null, onWalletMismatch = () => {};
 export async function api(path, data, key) {
   if (LOCAL) {
@@ -72,7 +71,7 @@ export async function api(path, data, key) {
   let result;
   try { result = await response.json(); } catch { throw Object.assign(new Error('暂时无法确认操作，请稍后重试'), { uncertain: true }); }
   if (result.code === 'WALLET_CHANGED' && expectedWallet === accountWallet) onWalletMismatch();
-  if (!response.ok) throw Object.assign(new Error(result.error || '操作暂未完成'), { status: response.status, code: result.code, uncertain: response.status >= 500 || result.code === 'RETRY_OPERATION' });
+  if (!response.ok) throw Object.assign(new Error(['PROTECTION_CONFIG', 'PROTECTION_STATE'].includes(result.code) ? '游戏暂时无法结算，请稍后重试' : result.error || '操作暂未完成'), { status: response.status, code: result.code, uncertain: response.status >= 500 || result.code === 'RETRY_OPERATION' });
   return result;
 }
 export function getPending(owner) {
@@ -299,10 +298,6 @@ export function createGame(ui) {
     box.append(el('p', '每局代币返还和金元宝均自动到账，无需手动领取。每一局按抽中的倍率判断手续费，费用按代币最小单位向下取整。提币不收取游戏手续费。金元宝与代币分别记账，不能用于下注或直接提币；兑换尚未开放，后续规则另行公布。'));
     ui.openDialog('转盘玩法', box);
   }
-  function protectionInfo() {
-    if (!state.config?.rules.protection?.enabled) return;
-    ui.openDialog('补偿说明', el('p', INTRO_RECOVERY_TERMS));
-  }
   function selectBet(value) { if (!QUICK_BETS.includes(value)) return; state.bet = value; render(); }
   async function showRound(round) {
     const index = landingIndex(state.segments, round, state.config.rules.version), copy = resultText(round);
@@ -512,7 +507,7 @@ export function createGame(ui) {
     } catch (e) { ui.connectionError(e.message, init); }
   }
   // No idle polling: page reload and explicit wallet/account actions refresh balances.
-  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, rules, protectionInfo, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
+  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
 }
 
 // Generic record rows shared by both frontends; each theme styles the classes.
@@ -523,7 +518,6 @@ export function recordRows(rounds) {
     main.append(el('strong', (round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×') + ' · 投入 ' + money(round.bet) + ' 币'), el('small', when(round.createdAt)));
     side.append(el('strong', signed(round.profit) + ' 币', Number(round.profit) > 0 ? 'positive' : Number(round.profit) < 0 ? 'negative' : ''), el('small', resultText(round).record + (round.outcomeKind === 'empty' ? '' : ' ' + money(round.net))));
     if (Number(round.ingots) > 0) side.append(el('small', '金元宝 +' + money(round.ingots), 'record-ingots'));
-    const recovery = recoveryDetail(round); if (recovery) side.append(el('small', recovery));
     row.append(main, side); return row;
   });
 }

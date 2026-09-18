@@ -1,5 +1,5 @@
 // 红运当头 · Red Fortune skin: labels, flavour text, seal stamps and effects over the shared skin runtime.
-import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v13-20260917-1ec285117df8';
+import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v13-20260917-f2a9573e22c3';
 mountSkin({
   navSelector: '.plaques',
   spinningMessage: '好彩头转起来…',
