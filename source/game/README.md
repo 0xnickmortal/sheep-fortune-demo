@@ -4,7 +4,7 @@
 
 [游戏站点](https://sheep-fortune-game.lingolayer.workers.dev/) · [运营管理](https://sheep-fortune-game.lingolayer.workers.dev/admin/) · [白名单管理](https://sheep-fortune-game.lingolayer.workers.dev/admin/whitelist/)
 
-Cloudflare Workers + D1 已接入羊年吉祥代币和现有托管合约，200万初始奖池及游戏税收入已对账。已实现钱包充值、凭证提现、自动到账核对、过期提现返还和管理员钱包签名登录。当前仅项目管理员钱包开放真实资金验收，公开充提保持关闭。
+Cloudflare Workers + D1 已接入羊年吉祥代币和现有托管合约，200万初始奖池及游戏税收入已对账。已实现钱包充值、凭证提现、自动到账核对、过期提现返还和管理员钱包签名登录。当前仅向确认的4个白名单钱包（含管理员）开放充值、提现和下注，公开充提保持关闭。
 
 最新状态、操作方法与验证边界见 [充值提现与白名单接入](docs/充值提现与白名单接入_20260918.md)，以下历史实现说明如有状态冲突，以该接入记录为准。页面已移除测试入口、奖项说明块与概率表。GitHub Pages只展示界面，钱包操作跳转游戏站点，不使用浏览器本地余额结算。
 

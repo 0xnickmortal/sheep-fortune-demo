@@ -23,8 +23,28 @@ export async function authorizeAdmin(db, request, env) {
   if (request.method !== 'GET' && (request.headers.get('origin') !== new URL(request.url).origin || request.headers.get('x-game-request') !== '1')) throw new GameError('请从管理页面发起操作', 403);
   return 'wallet';
 }
-// An optional owner-only acceptance phase; it never opens funds to the public.
+// Pin the acceptance cohort in server configuration. A later whitelist entry
+// must not silently gain payment access while the public gate is closed.
+export function validationWallets(env) {
+  try {
+    const values = JSON.parse(env.PAYMENTS_VALIDATION_WALLETS || '[]');
+    if (!Array.isArray(values) || values.length > 100) return [];
+    const addresses = values.map(value => getAddress(value).toLowerCase());
+    if (addresses.some(address => /^0x0{40}$/.test(address))) return [];
+    return [...new Set(addresses)];
+  } catch { return []; }
+}
+// Scope funds access to the verified account, never a client-provided address.
+// This does not grant administrative rights or change the wallet's game policy.
 export async function accountEnvironment(db, env, owner) {
-  if (env.PAYMENTS_VALIDATION_ENABLED === 'true' && await isAdminAccount(db, env, owner)) return { ...env, LIVE_PAYMENTS_ENABLED: 'true' };
+  if (env.LIVE_PAYMENTS_ENABLED === 'true' || env.PAYMENTS_VALIDATION_ENABLED !== 'true' || !owner) return env;
+  const account = await first(db, 'SELECT wallet,asset FROM accounts WHERE id=?', owner);
+  if (!account?.wallet || account.asset !== tokenAsset(env)) return env;
+  const wallet = account.wallet.toLowerCase();
+  if (wallet === adminWallet(env)) return { ...env, LIVE_PAYMENTS_ENABLED: 'true' };
+  if (validationWallets(env).includes(wallet)) {
+    const policy = await first(db, 'SELECT enabled FROM wallet_policies WHERE asset=? AND wallet=?', account.asset, wallet);
+    if (policy?.enabled === 1) return { ...env, LIVE_PAYMENTS_ENABLED: 'true' };
+  }
   return env;
 }

@@ -11,7 +11,7 @@
 - Wrangler 配置：项目根目录 `wrangler.json`。
 - 数据库绑定：`DB`；名称：`sheep-fortune-game-db`；创建位置偏好：APAC。
 - 独立构建：`npm run build:cloudflare`，不依赖 Sites 托管配置。
-- `LIVE_PAYMENTS_ENABLED=false`：测试币可玩，真实币充值、转盘及提现保持关闭。
+- `LIVE_PAYMENTS_ENABLED=false`：公开真实币充值、转盘及提现关闭。`PAYMENTS_VALIDATION_ENABLED=true` 时管理员及服务端固定名单内仍启用白名单的地址可操作；名单通过 `PAYMENTS_VALIDATION_WALLETS` secret 配置。
 - 已部署的推荐接口保留“钱包参加至少一局后才能生成邀请码”的规则。测试币不产生真实推荐返佣；后台部署成功不等于真实返佣已开放。
 - 公开 Worker 不信任外部请求的 `oai-authenticated-user-*` 头，试玩会话通过服务端 Cookie 隔离。
 - 本机管理密钥保存在被 Git 忽略的 `.data/cloudflare-ops.key`（仅本机用户可读写），线上保存为 Workers Secret；自动上传时不要在密钥末尾附加换行。
