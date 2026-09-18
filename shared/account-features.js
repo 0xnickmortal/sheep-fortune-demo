@@ -1,4 +1,5 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-bdb89b47b6d4';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
+import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -6,13 +7,21 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-bdb89b47b6d4',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-4c74afb9b3be',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate,walletProvider=()=>window.ethereum}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   function sharing(box,code){
     const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('ref',code);
-    const label=el('label','我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);label.append(input);box.append(label);
-    box.append(button('复制邀请链接',async()=>{try{await navigator.clipboard.writeText(url.href);notice('邀请链接已复制');}catch{input.focus();input.select();notice('请长按链接复制');}}));
+    const label=el('label','我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);input.className='copy-link-field';input.onclick=()=>selectCopyText(input);label.append(input);box.append(label);
+    const status=el('p','','invite-copy-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');status.setAttribute('aria-atomic','true');
+    const copy=button('复制邀请链接',async()=>{
+      copy.textContent='正在复制…';status.textContent='正在复制邀请链接…';status.dataset.state='pending';
+      const copied=await copyText(url.href,input);
+      copy.textContent=copied?'已复制 · 再复制一次':'重试复制';
+      status.textContent=copied?'邀请链接已复制，可以粘贴发送给好友。':'暂时无法自动复制，请长按上方链接，选择“复制”。';
+      status.dataset.state=copied?'success':'manual';
+    });
+    box.append(copy,status);
     if(navigator.share)box.append(button('分享给好友',async()=>{try{await navigator.share({title:'羊年大吉 · 邀请好友',url:url.href});}catch(e){if(e.name!=='AbortError')throw e;}}));
   }
   async function invite(){

@@ -17,6 +17,7 @@ async function transform(source, target, pairs) { await writeFile(target, replac
 await transform('public/shared/core.js', `${out}/shared/core.js`, [["'/wheel.js?v=6'", "'../wheel.js?v=6'"], ["'/outcome-view.js?v=5'", "'../outcome-view.js?v=5'"]]);
 await transform('public/shared/skin.js', `${out}/shared/skin.js`, [["'/shared/core.js?v=1'", "'./core.js?v=1'"]]);
 await cp('public/shared/account-features.js', `${out}/shared/account-features.js`);
+await cp('public/shared/clipboard.js', `${out}/shared/clipboard.js`);
 await cp('public/shared/wallet-network.js', `${out}/shared/wallet-network.js`);
 await cp('public/shared/wallet-providers.js', `${out}/shared/wallet-providers.js`);
 await cp('public/shared/account-features.css', `${out}/shared/account-features.css`);
