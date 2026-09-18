@@ -7,7 +7,9 @@ export async function hash(s){return [...new Uint8Array(await crypto.subtle.dige
 export function guard(db){const key=id();return [stmt(db,'INSERT INTO cas_guards(id,ok) VALUES (?,changes())',key),stmt(db,'DELETE FROM cas_guards WHERE id=?',key)];}
 export function accountUpdate(db,a,next){
  const hasIngots=next.ingots!==undefined;
- return [stmt(db,'UPDATE accounts SET available=?,rewards=?,locked=?'+(hasIngots?',ingots=?':'')+',revision=revision+1,last_play=? WHERE id=? AND revision=?',String(next.available??a.available),String(next.rewards??a.rewards),String(next.locked??a.locked),...(hasIngots?[String(next.ingots)]:[]),next.last_play??a.last_play,a.id,a.revision),...guard(db)];
+ const hasRecovery=next.recoveryLoss!==undefined;
+ const hasRecoveryUsed=next.recoveryUsed!==undefined;
+ return [stmt(db,'UPDATE accounts SET available=?,rewards=?,locked=?'+(hasIngots?',ingots=?':'')+(hasRecovery?',recovery_loss=?,recovery_round=?':'')+(hasRecoveryUsed?',recovery_used=?':'')+',revision=revision+1,last_play=? WHERE id=? AND revision=?',String(next.available??a.available),String(next.rewards??a.rewards),String(next.locked??a.locked),...(hasIngots?[String(next.ingots)]:[]),...(hasRecovery?[String(next.recoveryLoss),next.recoveryRound??null]:[]),...(hasRecoveryUsed?[next.recoveryUsed]:[]),next.last_play??a.last_play,a.id,a.revision),...guard(db)];
 }
 export function treasuryUpdate(db,t,next){return [stmt(db,'UPDATE treasuries SET available=?,burned=?,fees=?,revision=revision+1 WHERE asset=? AND revision=?',String(next.available??t.available),String(next.burned??t.burned),String(next.fees??t.fees),t.asset,t.revision),...guard(db)];}
 export function transfer(db,op,asset,debit,credit,amount,now){if(amount<0n)throw new Error('Negative ledger transfer');if(!amount)return [];return [stmt(db,'INSERT INTO ledger(id,operation,asset,debit,credit,amount,created_at) VALUES (?,?,?,?,?,?,?)',id(),op,asset,debit,credit,String(amount),now)];}

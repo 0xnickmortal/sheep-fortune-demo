@@ -297,6 +297,7 @@ export function createGame(ui) {
     box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需再次点击开始才会下注。'));
     box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按 1:1 获得金元宝。例如投入 1,000 币，分别获得 1,000 或 500 金元宝。1 倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
     box.append(el('p', '每局代币返还和金元宝均自动到账，无需手动领取。每一局按抽中的倍率判断手续费，费用按代币最小单位向下取整。提币不收取游戏手续费。金元宝与代币分别记账，不能用于下注或直接提币；兑换尚未开放，后续规则另行公布。'));
+    if (state.config.rules.protection?.enabled) box.append(el('p', '大额保护：单局投入达到下注前可用游戏余额的50%时，不会出现“谢谢参与”。每个钱包累计最多补偿'+state.config.rules.protection.maxCompensations+'次，充值、重连不重置。额度未用完时，该局抽中0.5倍才会记录下局补偿额，小额下注不产生补偿。下一次成功下注按新的投入金额，选择扣费后净盈利足以补回这笔损失的最小现有倍率，最高10倍。补偿成功结算记1次；达到10倍仍不够补回的，差额不再延续。次数用完后，大额局仍不会出现“谢谢参与”，但0.5倍不再产生补偿。金元宝继续按原规则入账。'));
     ui.openDialog('转盘玩法', box);
   }
   function selectBet(value) { state.bet = value; render(); }
@@ -385,7 +386,7 @@ export function createGame(ui) {
     if (!ready()) return;
     if (state.busy) return;
     if (LOCAL) {
-      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://dapp.yangnian.xyz/');
+      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://sheep-fortune-game.lingolayer.workers.dev/');
       const ref = new URL(location.href).searchParams.get('ref'); if (/^[a-f0-9]{24}$/.test(ref || '')) target.searchParams.set('ref', ref);
       link.href = target.href; box.append(el('p', '请在游戏站点连接钱包，查看余额并参与游戏。'), link); ui.openDialog('连接钱包', box); return;
     }

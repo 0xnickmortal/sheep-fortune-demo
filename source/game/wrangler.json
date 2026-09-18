@@ -33,7 +33,8 @@
     "DEPOSIT_START_BLOCK": "122584076",
     "POOL_FUND_SYNC_ENABLED": "true",
     "PAYMENT_SYNC_ENABLED": "true",
-    "PAYMENTS_VALIDATION_ENABLED": "true"
+    "PAYMENTS_VALIDATION_ENABLED": "true",
+    "BET_PROTECTION_ENABLED": "true"
   },
   "observability": {
     "enabled": true,

@@ -88,6 +88,8 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       side.append(el('strong', copy.amountLabel + ' ' + money(round.net) + ' 币'));
       side.append(el('small', '净变化 ' + signed(round.profit) + ' 币 · ' + (round.version === game.state.config.rules.version ? '手续费 ' : '当时已扣 ') + money(round.fee) + ' 币'));
       side.append(el('small', ingots ? '金元宝 +' + money(round.ingots) : copy.message, ingots ? 'result-ingots' : 'result-message'));
+      if (round.protection?.mode === 'recovery') side.append(el('small', '本局使用补偿 · 已补回 ' + money(round.protection.recovered) + ' 币 · 剩余 '+round.protection.remaining+' 次' + (round.protection.capped ? '；已达10倍上限，尚差 ' + money(round.protection.shortfall) + ' 币，补偿结束' : ''), 'result-message'));
+      else if (Number(round.protection?.pendingAfter) > 0) side.append(el('small', '已记录下局补偿额 ' + money(round.protection.pendingAfter) + ' 币，最高10倍，未补齐不延续', 'result-message'));
       box.append(main, side);
       $('stage-message').hidden = true; box.hidden = false;
       if (landed) celebrate(kind, round, { stage: s, sound, particles, haptic });

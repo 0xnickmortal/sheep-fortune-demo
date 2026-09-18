@@ -1,5 +1,6 @@
 import { withdrawalView } from './withdrawal-fee.js';
 import { GameError, RULES, formatAmount } from './rules.js';
+import { protectionOptions, protectionRules } from './bet-protection.js';
 import { first, all } from './db.js';
 import { demoLogin, challenge, walletLogin, walletLogout, requireOwner, tokenAsset } from './auth.js';
 import { listWhitelist, saveWhitelist } from './whitelist.js';
@@ -26,7 +27,7 @@ async function body(request) {
   try { const value = JSON.parse(new TextDecoder().decode(buffer)); if (!value || Array.isArray(value) || typeof value !== 'object') throw Error(); return value; } catch { throw new GameError('请求格式不正确'); }
 }
 async function playerState(db, env, owner) {
-  return { ...await getState(db, owner), admin: await isAdminAccount(db, env, owner), payments: paymentConfig(await accountEnvironment(db, env, owner)) };
+  return { ...await getState(db, owner, protectionOptions(env)), admin: await isAdminAccount(db, env, owner), payments: paymentConfig(await accountEnvironment(db, env, owner)) };
 }
 export async function audit(db) {
   const balances = new Map(), rows = await all(db, 'SELECT * FROM ledger');
@@ -50,9 +51,9 @@ async function api(request, env) {
   }
   const data = request.method === 'POST' ? await body(request) : {}, key = request.headers.get('idempotency-key');
   const route = request.method + ' ' + path;
-  if (route === 'GET /api/health') { await first(db, 'SELECT 1 AS ok'); return json({ ok: true, paymentsEnabled: paymentConfig(env).enabled, rulesVersion: RULES.version }); }
-  if (route === 'GET /api/config') return json({ rules: RULES, payments: paymentConfig(env), referrals: REFERRAL_RULES });
-  if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request, env); return json(await getState(db, login.owner), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
+  if (route === 'GET /api/health') { await first(db, 'SELECT 1 AS ok'); return json({ ok: true, paymentsEnabled: paymentConfig(env).enabled, rulesVersion: protectionRules(RULES,protectionOptions(env).protectionEnabled).version }); }
+  if (route === 'GET /api/config') return json({ rules: protectionRules(RULES,protectionOptions(env).protectionEnabled), payments: paymentConfig(env), referrals: REFERRAL_RULES });
+  if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request, env); return json(await getState(db, login.owner,protectionOptions(env)), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
   if (route === 'POST /api/auth/challenge') return json(await challenge(db, request, data.address));
   if (route === 'POST /api/auth/logout') return json({loggedOut:true},200,{'Set-Cookie':await walletLogout(db,request)});
   if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await playerState(db, env, login.owner), 200, { 'Set-Cookie': login.cookie }); }
@@ -100,7 +101,7 @@ async function api(request, env) {
   if (route === 'POST /api/play') {
     const a = await first(db, 'SELECT asset FROM accounts WHERE id=?', owner);
     if (a?.asset !== 'demo' && !paymentConfig(env).enabled) throw new GameError('游戏暂未开放，请稍后再来', 503, 'PAYMENTS_CLOSED');
-    return json(await play(db, owner, key, data.amount, { expectedVersion: data.rulesVersion, requireRulesVersion: true }));
+    return json(await play(db, owner, key, data.amount, { expectedVersion: data.rulesVersion, requireRulesVersion: true, ...protectionOptions(env) }));
   }
   if (route === 'POST /api/claim') return json(await claim(db, owner, key));
   if (route === 'POST /api/demo/topup') return json(await demoTopup(db, owner, key, data.amount));

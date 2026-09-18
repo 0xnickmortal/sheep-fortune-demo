@@ -1,6 +1,6 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
-import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
-import { createReferralMonitor, referralTotal } from './referral-monitor.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-cfdf3b7f69af';
+import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-cfdf3b7f69af';
+import { createReferralMonitor, referralTotal } from './referral-monitor.js?v=server-wheel-77-v13-20260917-cfdf3b7f69af';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>{const [whole,fraction='']=String(n??'0').split('.');return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(fraction?'.'+fraction:'');};
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -8,10 +8,10 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-6f807d16cf94',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-cfdf3b7f69af',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate,walletProvider=()=>window.ethereum}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
-  let referralCard, referralDetails, referralData, referralNotice='', referralUpdated='', referralError='';
+  let referralCard, referralDetails, referralData, referralNotice='', referralUpdated='', referralError='', protectionCard;
   const referrals=createReferralMonitor({
     fetchSummary:()=>api('/referrals'),
     onCredit:amount=>{referralNotice='新返佣 +'+money(amount)+' 币，已入游戏余额';notice(referralNotice);void refresh().catch(()=>{});},
@@ -27,6 +27,8 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
       referralDetails=null;
     }
     const entry=document.getElementById('invite-open');
+    if(!protectionCard&&entry){protectionCard=el('section',undefined,'referral-card');protectionCard.id='bet-protection-summary';protectionCard.setAttribute('aria-label','大额保护记录');entry.before(protectionCard);}
+    if(protectionCard){const p=account()?.protection;protectionCard.hidden=!p?.enabled;protectionCard.replaceChildren();if(p?.enabled)protectionCard.append(el('h2','大额保护记录'),el('p','补偿已用 '+p.used+' / '+p.maxCompensations+' 次 · 剩余 '+p.remaining+' 次'),el('p',Number(p.pendingLoss)>0?'下局补偿额 '+money(p.pendingLoss)+' 币':p.remaining===0?'补偿次数已用完':'暂无待补偿'),el('small','每个钱包累计计算，补偿到账后记1次。按下一局投入计算，最多10倍，未补齐的差额不延续。补偿额不能直接提现。'));}
     if(!referralCard&&entry){referralCard=el('section',undefined,'referral-card');referralCard.id='referral-summary';referralCard.setAttribute('aria-label','我的返佣');entry.before(referralCard);changed=true;}
     if(referralCard){referralCard.hidden=!owner;if(changed)paintReferralCard();}
   }

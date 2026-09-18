@@ -57,6 +57,20 @@
       "when": 1789724101051,
       "tag": "0007_cool_susan_delgado",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1789731075750,
+      "tag": "0008_majestic_micromacro",
+      "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1789731670486,
+      "tag": "0009_aberrant_apocalypse",
+      "breakpoints": true
     }
   ]
 }
