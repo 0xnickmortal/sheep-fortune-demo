@@ -71,7 +71,7 @@ Node 22.13+（本次使用 Node 25.4），`npm ci` 后 `npm run dev`，本地地
 
 ## 尚未开通真实资金
 
-默认 `LIVE_PAYMENTS_ENABLED=false`。当前发布仅用于私有测试，测试币不能提现。
+开发配置默认 `LIVE_PAYMENTS_ENABLED=false`。线上已按用户指令开放所有签名登录钱包的充值、提现与下注；生产配置为 `LIVE_PAYMENTS_ENABLED=true`、`PAYMENTS_VALIDATION_ENABLED=false`。测试币不能提现。
 
 开放真实资金还需要：确认代币、管理员多签和后台签名人，部署并验证托管合约，配置RPC、充值起始区块、服务端签名secret及OPS_AUTH_KEY，核对真实代币税费、账本储备及返佣经济参数。推荐返佣已在本轮开发，但尚未线上启用；原代币的交易分红不在本轮修改范围。正式运营还需接好对账、限流与备份。
 

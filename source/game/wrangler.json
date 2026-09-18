@@ -20,7 +20,7 @@
     }
   ],
   "vars": {
-    "LIVE_PAYMENTS_ENABLED": "false",
+    "LIVE_PAYMENTS_ENABLED": "true",
     "PAYMENT_MODE": "vault",
     "TOKEN_ADDRESS": "0xaf4d973fceacba24467c01ca8c8dd0e820b18732",
     "TOKEN_SYMBOL": "羊年吉祥",
@@ -33,7 +33,7 @@
     "DEPOSIT_START_BLOCK": "122584076",
     "POOL_FUND_SYNC_ENABLED": "true",
     "PAYMENT_SYNC_ENABLED": "true",
-    "PAYMENTS_VALIDATION_ENABLED": "true",
+    "PAYMENTS_VALIDATION_ENABLED": "false",
     "BET_PROTECTION_ENABLED": "true"
   },
   "observability": {

@@ -10,6 +10,56 @@ import { validationWallets } from '../server/admin-auth.js';
 import { RULES } from '../server/rules.js';
 import worker, { audit } from '../server/worker.js';
 
+test('public launch lets an ordinary wallet deposit, play with protection and withdraw without granting admin rights', async t => {
+  const h = await vaultHarness(); t.after(h.cleanup);
+  const { db, env, users, token, vault, mine } = h, [admin, member, outsider] = users;
+  const live = { ...env, ADMIN_WALLET: admin.address, LIVE_PAYMENTS_ENABLED: 'true', PAYMENTS_VALIDATION_ENABLED: 'false', PAYMENTS_VALIDATION_WALLETS: JSON.stringify([member.address]), BET_PROTECTION_ENABLED: 'true' };
+  const call = (user, path, data) => worker.fetch(new Request('http://127.0.0.1:4382/api' + path, {
+    method: data === undefined ? 'GET' : 'POST',
+    headers: { ...(user ? { Cookie: user.cookie.split(';')[0] } : {}), Origin: 'http://127.0.0.1:4382', 'X-Game-Request': '1', 'Content-Type': 'application/json', 'Idempotency-Key': key() },
+    ...(data === undefined ? {} : { body: JSON.stringify(data) }),
+  }), live);
+  const ok = async response => { const body = await response.json(); assert.equal(response.status, 200, JSON.stringify(body)); return body; };
+  assert.equal(await first(db, 'SELECT * FROM wallet_policies WHERE asset=? AND wallet=?', tokenAsset(env), outsider.address), null);
+  assert.equal((await ok(await call(null, '/config'))).payments.enabled, true);
+  const initial = await ok(await call(outsider, '/account'));
+  assert.equal(initial.payments.enabled, true); assert.equal(initial.admin, false);
+  assert.equal(initial.benefits.whitelisted, false); assert.equal(initial.benefits.withdrawalFeeExempt, false);
+  assert.deepEqual(initial.rules.outcomes.map(o => o.weight), RULES.outcomes.map(o => o.weight));
+  assert.equal(initial.protection.maxCompensations, 3);
+  assert.equal((await call(outsider, '/admin/session')).status, 403);
+  assert.equal((await call(outsider, '/admin/whitelist', {})).status, 403);
+  assert.equal((await call(null, '/deposits/prepare', { amount: '500' })).status, 401);
+
+  const prepared = await ok(await call(outsider, '/deposits/prepare', { amount: '500' }));
+  if (prepared.needsApproval) await (await outsider.signer.sendTransaction(prepared.approval)).wait();
+  const deposit = await outsider.signer.sendTransaction(prepared.transaction); await deposit.wait();
+  await ok(await call(outsider, '/deposits/track', { txHash: deposit.hash }));
+  await mine(); await syncPayments(db, live);
+  const funded = await ok(await call(outsider, '/account'));
+  assert.equal(funded.balance, '10500');
+  const spin = await ok(await call(outsider, '/play', { amount: '5500', rulesVersion: funded.rules.version }));
+  assert.equal(spin.round.protection.mode, 'high-stake');
+  assert.notEqual(spin.round.multiplierBps, 0);
+  assert.equal(parseEther(spin.balance), parseEther('5000') + parseEther(spin.round.net));
+
+  const walletBefore = await token.balanceOf(outsider.address);
+  const quote = await ok(await call(outsider, '/withdrawals/quote', { amount: '100' }));
+  const withdrawal = await ok(await call(outsider, '/withdrawals', { amount: '100', feeVersion: quote.feeVersion }));
+  assert.equal(withdrawal.feeExempt, false);
+  const authorization = await ok(await call(outsider, '/withdrawals/' + withdrawal.id + '/authorization'));
+  assert.equal((await call(member, '/withdrawals/' + withdrawal.id + '/authorization')).status, 404);
+  await (await outsider.signer.sendTransaction(authorization.transaction)).wait(); await mine();
+  await syncPayments(db, live);
+  assert.equal((await first(db, 'SELECT status FROM withdrawals WHERE id=?', withdrawal.id)).status, 'confirmed');
+  assert.equal(await token.balanceOf(outsider.address), walletBefore + parseEther(quote.payout));
+  const after = await ok(await call(outsider, '/account'));
+  assert.equal(after.locked, '0'); assert.equal(parseEther(after.balance), parseEther(spin.balance) - parseEther('100'));
+  assert.equal(after.protection.pendingLoss, spin.round.protection.pendingAfter);
+  assert.equal(after.protection.used, 0);
+  assert.equal((await audit(db)).ok, true);
+});
+
 test('limited wallet cohort can deposit, play and withdraw while public access stays closed', async t => {
   const h = await vaultHarness(); t.after(h.cleanup);
   const { db, env, users, token, vault, mine } = h, [admin, member, outsider] = users;
