@@ -2,14 +2,14 @@
 <html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>钱包白名单管理</title><link rel="stylesheet" href="./style.css"></head>
 <body><main>
 <header><p class="eyebrow">羊年大吉 · 管理</p><h1>钱包白名单</h1><p>为指定钱包设置游戏概率与免提现手续费资格。</p></header>
-<section><h2>管理登录</h2><form id="login"><label for="admin-key">管理密钥</label><div class="login-row"><input id="admin-key" type="password" autocomplete="off" required minlength="32" placeholder="输入服务端 OPS_AUTH_KEY"><button type="submit">读取配置</button><button id="logout" type="button" class="secondary">退出</button></div><p class="hint">密钥只在本页内存使用，关闭页面后需重新输入。</p></form></section>
+<section><h2>管理登录</h2><button id="wallet-login" type="button">连接管理员钱包</button><p><a href="/admin/">返回运营管理</a></p><details><summary>备用密钥登录</summary><form id="login"><label for="admin-key">管理密钥</label><div class="login-row"><input id="admin-key" type="password" autocomplete="off" required minlength="32" placeholder="输入服务端 OPS_AUTH_KEY"><button type="submit">读取配置</button><button id="logout" type="button" class="secondary">退出</button></div><p class="hint">密钥只在本页内存使用，关闭页面后需重新输入。</p></form></details></section>
 <section id="editor" hidden><h2 id="editor-title">新增地址</h2><form id="policy-form">
 <label for="wallet">BSC 钱包地址</label><input id="wallet" autocomplete="off" spellcheck="false" required placeholder="0x…">
 <div id="probabilities" class="probabilities"></div><p id="total" class="total"></p><p id="rtp" class="hint"></p>
 <label class="check"><input type="checkbox" id="enabled">启用此地址的专属概率及免提现手续费资格</label>
-<p class="hint">停用后，下一局恢复普通概率。已结算游戏和已提交提现保留原规则。当前钱包会看到实际适用概率。</p>
+<p class="hint">停用后，下一局恢复普通概率。已结算游戏和已提交提现保留原规则。配置只影响下一局，保存前请核对合计。</p>
 <div class="actions"><button type="submit">保存配置</button><button id="new-entry" type="button" class="secondary">新增另一个地址</button></div>
 </form></section>
 <section id="entries-section" hidden><h2>已保存地址</h2><div id="entries"></div><button id="more" class="secondary" hidden>读取下一页</button></section>
-<p id="status" role="status" aria-live="polite"></p><p class="hint">此管理页需要游戏后端，GitHub 静态试玩站不提供管理接口。白名单只免游戏提现手续费，链上 Gas 与代币转账税按各自规则执行。</p>
+<p id="status" role="status" aria-live="polite"></p><p class="hint">此管理页需要游戏后端，请在正式游戏站点使用。白名单只免游戏提现手续费，链上 Gas 与代币转账税按各自规则执行。</p>
 </main><script type="module" src="./app.js"></script></body></html>

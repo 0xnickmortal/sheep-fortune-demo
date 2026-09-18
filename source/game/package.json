@@ -17,7 +17,9 @@
     "build:cloudflare": "node scripts/build.mjs --cloudflare",
     "cf:dev": "npm run build:cloudflare && wrangler dev --config wrangler.json",
     "cf:migrate": "wrangler d1 migrations apply DB --remote --config wrangler.json",
-    "cf:deploy": "npm run build:cloudflare && wrangler deploy --config wrangler.json"
+    "cf:deploy": "npm run build:cloudflare && wrangler deploy --config wrangler.json",
+    "build:vault": "npm run contracts:build && node scripts/build-vault-console.mjs",
+    "prebuild:cloudflare": "npm run build:vault"
   },
   "dependencies": {
     "@openzeppelin/contracts": "5.6.1",

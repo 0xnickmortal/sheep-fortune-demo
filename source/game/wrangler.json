@@ -22,14 +22,27 @@
   "vars": {
     "LIVE_PAYMENTS_ENABLED": "false",
     "PAYMENT_MODE": "vault",
-    "TOKEN_ADDRESS": "0x61bEcda3b07301889b51Fd84b0E58385311590ba",
-    "TOKEN_SYMBOL": "TST",
+    "TOKEN_ADDRESS": "0xaf4d973fceacba24467c01ca8c8dd0e820b18732",
+    "TOKEN_SYMBOL": "羊年吉祥",
     "BSC_CONFIRMATIONS": "20",
-    "TRUST_PLATFORM_IDENTITY": "false"
+    "TRUST_PLATFORM_IDENTITY": "false",
+    "BSC_RPC_URL": "https://bsc-dataseed.bnbchain.org",
+    "POOL_SYNC_ENABLED": "true",
+    "VAULT_ADDRESS": "0x8Fd45A2B7582fe5bEc61b7aF959C69714baFA1B5",
+    "ADMIN_WALLET": "0x0e6cFe55b8F1AC4e1E0377AD2b7078716aB06f34",
+    "DEPOSIT_START_BLOCK": "122584076",
+    "POOL_FUND_SYNC_ENABLED": "true",
+    "PAYMENT_SYNC_ENABLED": "true",
+    "PAYMENTS_VALIDATION_ENABLED": "true"
   },
   "observability": {
     "enabled": true,
     "head_sampling_rate": 1
   },
-  "account_id": "5b6092c4a7492f32938124703cfd5a0b"
+  "account_id": "5b6092c4a7492f32938124703cfd5a0b",
+  "triggers": {
+    "crons": [
+      "* * * * *"
+    ]
+  }
 }

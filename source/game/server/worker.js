@@ -1,8 +1,11 @@
 import { withdrawalView } from './withdrawal-fee.js';
 import { GameError, RULES, formatAmount } from './rules.js';
-import { first, all, hash } from './db.js';
+import { first, all } from './db.js';
 import { demoLogin, challenge, walletLogin, requireOwner, tokenAsset } from './auth.js';
 import { listWhitelist, saveWhitelist } from './whitelist.js';
+import { poolStatus, syncPoolIncome } from './pool.js';
+import { authorizeAdmin, isAdminAccount, accountEnvironment, adminWallet } from './admin-auth.js';
+import { trackDeposit, syncPayments } from './payment-monitor.js';
 import { referralSummary, resolveReferral, bindReferral, activateReferral, REFERRAL_RULES } from './referrals.js';
 import { prepareVaultDeposit, getVaultAuthorization, prepareBurn, finishBurn } from './vault-payments.js';
 import { getState, play, claim, history, ingotState, demoTopup } from './game.js';
@@ -22,9 +25,8 @@ async function body(request) {
   const buffer = new Uint8Array(length); let at = 0; for (const chunk of chunks) { buffer.set(chunk, at); at += chunk.length; }
   try { const value = JSON.parse(new TextDecoder().decode(buffer)); if (!value || Array.isArray(value) || typeof value !== 'object') throw Error(); return value; } catch { throw new GameError('请求格式不正确'); }
 }
-async function admin(request, env) {
-  const key = env.OPS_AUTH_KEY || '', supplied = (request.headers.get('authorization') || '').replace(/^Bearer /, '');
-  if (key.length < 32 || !supplied || await hash(key) !== await hash(supplied)) throw new GameError('无管理权限', 403);
+async function playerState(db, env, owner) {
+  return { ...await getState(db, owner), admin: await isAdminAccount(db, env, owner), payments: paymentConfig(await accountEnvironment(db, env, owner)) };
 }
 export async function audit(db) {
   const balances = new Map(), rows = await all(db, 'SELECT * FROM ledger');
@@ -42,7 +44,7 @@ async function api(request, env) {
   if (!env.DB) throw new GameError('游戏账户服务正在准备中', 503);
   const db = env.DB.withSession ? env.DB.withSession('first-primary') : env.DB;
   if (request.method !== 'GET' && request.method !== 'POST') throw new GameError('不支持此操作', 405);
-  if (isAdmin) await admin(request, env);
+  if (isAdmin) await authorizeAdmin(db, request, env);
   if (request.method === 'POST' && !isAdmin) {
     if (request.headers.get('origin') !== url.origin || request.headers.get('x-game-request') !== '1') throw new GameError('请从游戏页面发起操作', 403);
   }
@@ -52,8 +54,13 @@ async function api(request, env) {
   if (route === 'GET /api/config') return json({ rules: RULES, payments: paymentConfig(env), referrals: REFERRAL_RULES });
   if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request, env); return json(await getState(db, login.owner), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
   if (route === 'POST /api/auth/challenge') return json(await challenge(db, request, data.address));
-  if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await getState(db, login.owner), 200, { 'Set-Cookie': login.cookie }); }
+  if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await playerState(db, env, login.owner), 200, { 'Set-Cookie': login.cookie }); }
   if (isAdmin) {
+    if (route === 'GET /api/admin/session') return json({admin:true,wallet:adminWallet(env),payments:paymentConfig(env),validation:env.PAYMENTS_VALIDATION_ENABLED==='true'});
+    if (route === 'POST /api/admin/payments/sync') return json(await syncPayments(db,env));
+    if (route === 'GET /api/admin/payments') return json({deposits:await all(db,'SELECT tx_hash,amount,created_at,owner FROM deposits WHERE asset=? ORDER BY created_at DESC LIMIT 100',tokenAsset(env)),pendingDeposits:await all(db,'SELECT tx_hash,status,error,updated_at,owner FROM pending_deposits WHERE asset=? ORDER BY updated_at DESC LIMIT 100',tokenAsset(env)),withdrawals:(await all(db,'SELECT id,recipient,amount,fee,fee_bps,fee_version,status,tx_hash,created_at FROM withdrawals WHERE asset=? ORDER BY created_at DESC LIMIT 100',tokenAsset(env))).map(withdrawalView)});
+    if (route === 'GET /api/admin/pool') return json(await poolStatus(db,env));
+    if (route === 'POST /api/admin/pool/sync') return json(await syncPoolIncome(db,env,key));
     if (route === 'GET /api/admin/whitelist') return json(await listWhitelist(db, tokenAsset(env), url.searchParams.get('after') || ''));
     if (route === 'POST /api/admin/whitelist') return json(await saveWhitelist(db, tokenAsset(env), key, data));
     if (route === 'GET /api/admin/audit') return json(await audit(db));
@@ -74,7 +81,8 @@ async function api(request, env) {
     throw new GameError('接口不存在', 404);
   }
   const owner = await requireOwner(db, request);
-  if (route === 'GET /api/account') return json(await getState(db, owner));
+  if (route === 'GET /api/account') return json(await playerState(db, env, owner));
+  env = await accountEnvironment(db, env, owner);
   if (route === 'GET /api/referrals') return json(await referralSummary(db, owner));
   if (route === 'GET /api/referrals/resolve') { const resolved = await resolveReferral(db, owner, url.searchParams.get('code')); return json({ code: resolved.code, wallet: resolved.wallet }); }
   if (route === 'POST /api/referrals/bind') return json(await bindReferral(db, owner, key, data.code));
@@ -82,15 +90,16 @@ async function api(request, env) {
   if (route === 'GET /api/rounds') return json({ rounds: await history(db, owner) });
   if (route === 'GET /api/ingots') return json(await ingotState(db, owner));
   if (route === 'POST /api/ingots/redeem') throw new GameError('金元宝兑换暂未开放，兑换规则将另行公布',409,'REDEMPTION_CLOSED');
-  if (route === 'GET /api/payments') return json(await paymentHistory(db, owner));
+  if (route === 'GET /api/payments') return json({...await paymentHistory(db, owner),pendingDeposits:await all(db,"SELECT tx_hash,status,error,updated_at FROM pending_deposits WHERE owner=? AND status<>'confirmed' ORDER BY created_at DESC LIMIT 25",owner)});
   if (route === 'POST /api/play') {
     const a = await first(db, 'SELECT asset FROM accounts WHERE id=?', owner);
-    if (a?.asset !== 'demo' && !paymentConfig(env).enabled) throw new GameError('正式游戏尚未开放，请返回测试币体验', 503, 'PAYMENTS_CLOSED');
+    if (a?.asset !== 'demo' && !paymentConfig(env).enabled) throw new GameError('游戏暂未开放，请稍后再来', 503, 'PAYMENTS_CLOSED');
     return json(await play(db, owner, key, data.amount, { expectedVersion: data.rulesVersion, requireRulesVersion: true }));
   }
   if (route === 'POST /api/claim') return json(await claim(db, owner, key));
   if (route === 'POST /api/demo/topup') return json(await demoTopup(db, owner, key, data.amount));
   if (route === 'POST /api/deposits') return json(await creditDeposit(db, env, owner, key, data.txHash));
+  if (route === 'POST /api/deposits/track') return json(await trackDeposit(db,env,owner,data.txHash));
   if (route === 'POST /api/deposits/prepare') return json(await prepareVaultDeposit(db,env,owner,data.amount));
   if (route === 'POST /api/withdrawals/quote') return json(await quoteWithdrawal(db, env, owner, data.amount));
   if (route === 'POST /api/withdrawals') return json(await requestWithdrawal(db, env, owner, key, data.amount, data.feeVersion));
@@ -100,7 +109,13 @@ async function api(request, env) {
   if (request.method === 'POST' && check) return json(await finishWithdrawal(db, env, owner, key, check[1]));
   throw new GameError('接口不存在', 404);
 }
-export default { async fetch(request, env) {
+export default { async scheduled(event,env) {
+  const db=env.DB.withSession?env.DB.withSession('first-primary'):env.DB;
+  let poolError;
+  if(env.POOL_SYNC_ENABLED==='true'&&env.VAULT_ADDRESS)try{await syncPoolIncome(db,env,'pool-sync-'+event.scheduledTime);}catch(e){poolError=e;}
+  if(env.PAYMENT_SYNC_ENABLED==='true'&&env.VAULT_ADDRESS)await syncPayments(db,env);
+  if(poolError)throw poolError;
+}, async fetch(request, env) {
   if (!new URL(request.url).pathname.startsWith('/api/')) return env.ASSETS ? env.ASSETS.fetch(request) : new Response('Not found', { status: 404 });
   try { return await api(request, env); } catch (e) { if (!(e instanceof GameError)) console.error('Game API failure', e); return json({ error: e instanceof GameError ? e.message : '服务暂时繁忙，请使用原操作重试', code: e instanceof GameError ? e.code : 'SERVER_ERROR' }, e instanceof GameError ? e.status : 500); }
 }};

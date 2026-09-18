@@ -1,7 +1,7 @@
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-aae42cacec43';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-c22646709831';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
@@ -28,6 +28,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('wallet-address', a.wallet || '尚未连接钱包');
       $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : '重新连接钱包';
       text('deposit-open', '充值');
+      if ($('admin-entry')) $('admin-entry').hidden = !a.admin;
       for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === v.bet; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); }
       const custom = $('custom-bet'); custom.classList.toggle('chosen', v.isCustom); custom.setAttribute('aria-pressed', String(v.isCustom)); custom.firstElementChild.textContent = v.isCustom ? money(v.bet) : customLabel;
       $('start').disabled = !v.canPlay; $('start').firstElementChild.textContent = v.startLabel || startLabel; text('start-cost', '本局投入 ' + v.startCost + ' 币');

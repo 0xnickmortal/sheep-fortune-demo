@@ -10,6 +10,7 @@ import { rpc, receipt, paymentConfig } from './payments.js';
 export const VAULT_ABI = [
   'function token() view returns(address)', 'function signer() view returns(address)', 'function signerEpoch() view returns(uint256)',
   'function maxWithdrawal() view returns(uint256)', 'function maxBurn() view returns(uint256)', 'function owner() view returns(address)',
+  'function paused() view returns(bool)',
   'function cancelled(bytes32) view returns(bool)', 'function executedAt(bytes32) view returns(uint256)',
   'function deposit(uint256 amount)', 'function fundPool(uint256 amount)',
   'function withdraw((bytes32 id,address recipient,uint256 amount,uint256 deadline,uint256 epoch) w,bytes signature)',
@@ -18,7 +19,7 @@ export const VAULT_ABI = [
   'event Withdrawn(bytes32 indexed id,address indexed recipient,uint256 amount)', 'event Burned(bytes32 indexed id,uint256 amount,bool reducedTotalSupply)',
 ];
 export const vaultInterface = new Interface(VAULT_ABI);
-const erc20 = new Interface(['function balanceOf(address) view returns(uint256)', 'function approve(address,uint256) returns(bool)']);
+const erc20 = new Interface(['function balanceOf(address) view returns(uint256)', 'function allowance(address,address) view returns(uint256)', 'function approve(address,uint256) returns(bool)']);
 export const WITHDRAWAL_TYPES = { Withdrawal: [{ name:'id',type:'bytes32' },{ name:'recipient',type:'address' },{ name:'amount',type:'uint256' },{ name:'deadline',type:'uint256' },{ name:'epoch',type:'uint256' }] };
 export const BURN_TYPES = { Burn: [{ name:'id',type:'bytes32' },{ name:'amount',type:'uint256' },{ name:'reserveFloor',type:'uint256' },{ name:'deadline',type:'uint256' },{ name:'epoch',type:'uint256' }] };
 export const vaultDomain = vault => ({ name:'SheepGameVault',version:'1',chainId:56,verifyingContract:vault });
@@ -50,9 +51,16 @@ function events(r,c,name) {
 }
 export async function prepareVaultDeposit(db,env,owner,amount) {
   const {c}=await setup(env),a=await tokenAccount(db,env,owner),value=parseAmount(amount);
-  return { amount, account:a.wallet, approval:{to:c.token,data:erc20.encodeFunctionData('approve',[c.vaultAddress,value]),value:'0x0'}, transaction:{to:c.vaultAddress,data:vaultInterface.encodeFunctionData('deposit',[value]),value:'0x0'} };
+  if(await call(env,c.vaultAddress,vaultInterface,'paused'))throw new GameError('充值暂时暂停，请稍后再来',409,'VAULT_PAUSED');
+  const balance=await call(env,c.token,erc20,'balanceOf',[a.wallet]),allowance=await call(env,c.token,erc20,'allowance',[a.wallet,c.vaultAddress]);
+  if(value>balance)throw new GameError('钱包代币余额不足');
+  return { amount:formatAmount(value), account:a.wallet, walletBalance:formatAmount(balance), needsApproval:allowance<value, approval:{to:c.token,data:erc20.encodeFunctionData('approve',[c.vaultAddress,value]),value:'0x0'}, transaction:{to:c.vaultAddress,data:vaultInterface.encodeFunctionData('deposit',[value]),value:'0x0'} };
 }
 export async function creditVaultDeposit(db,env,owner,key,txHash,pool=false) {
+  // Operators can fund the pool before opening public payments. Player deposits
+  // keep the live gate; this does not enable withdrawals or gameplay.
+  if(pool) env={...env,LIVE_PAYMENTS_ENABLED:'true'};
+  if(pool){const previous=await first(db,'SELECT funded_credited FROM pool_income WHERE asset=? AND vault=?',tokenAsset(env),env.VAULT_ADDRESS?.toLowerCase());if(BigInt(previous?.funded_credited||0)>0n)throw new GameError('该游戏池已自动核对注资，不再逐笔重复入账',409,'AUTOMATIC_POOL_FUNDING');}
   const {c}=await setup(env); if(!/^0x[0-9a-fA-F]{64}$/.test(txHash||''))throw new GameError('请输入完整交易哈希'); txHash=txHash.toLowerCase();
   const a=pool?null:await tokenAccount(db,env,owner),asset=tokenAsset(env),r=await receipt(env,txHash);
   if(BigInt(r.status)!==1n||BigInt(r.blockNumber)<BigInt(env.DEPOSIT_START_BLOCK))throw new GameError('充值交易无效或早于开放时间');
@@ -78,6 +86,7 @@ export async function requestVaultWithdrawal(db,env,owner,key,amount,feeVersion)
   const value=parseAmount(amount);
   return operation(db,owner,key,'withdraw',{amount},async(op,now)=>{
     const {c,issuer,epoch,chainTime}=await setup(env),a=await tokenAccount(db,env,owner),policy=await accountPolicy(db,a),control=await vaultControl(db,a.asset);
+    if(await call(env,c.vaultAddress,vaultInterface,'paused'))throw new GameError('提现暂时暂停，请稍后再来',409,'VAULT_PAUSED');
     if(policy.withdrawalFee.version!==feeVersion)throw new GameError('提现费率已更新，请重新查看手续费后确认',409,'FEE_CHANGED');
     if(value>BigInt(a.available))throw new GameError('可用余额不足');
     const checks=custodyGuard(db,control),quote=withdrawalQuote(amount,policy.withdrawalFee),payout=parseAmount(quote.payout),wid=id();
@@ -114,8 +123,21 @@ async function execution(env,v) {
   const c=config(env),block=await call(env,v.vault,vaultInterface,'executedAt',[v.payload.id]);
   if(block===0n)return null;
   const tag='0x'+block.toString(16),eventName=v.kind==='burn'?'Burned':'Withdrawn';
-  const logs=await rpc(env,'eth_getLogs',[{address:v.vault,fromBlock:tag,toBlock:tag,topics:[vaultInterface.getEvent(eventName).topicHash,v.payload.id]}]);
-  const tx=logs.find(l=>!l.removed)?.transactionHash;
+  // BSC's public RPC may disable eth_getLogs. The contract records its exact
+  // execution block, so direct wallet submissions can be found without a scan.
+  const executionBlock=await rpc(env,'eth_getBlockByNumber',[tag,true]);
+  const expectedData=vaultInterface.encodeFunctionData(v.kind==='burn'?'executeBurn':'withdraw',[v.payload,v.signature]).toLowerCase();
+  let tx;
+  for(const candidate of executionBlock?.transactions||[]){
+    if(candidate.to?.toLowerCase()!==v.vault||(candidate.input||candidate.data)?.toLowerCase()!==expectedData)continue;
+    const proof=await rpc(env,'eth_getTransactionReceipt',[candidate.hash]);
+    if(proof?.status&&BigInt(proof.status)===1n){tx=candidate.hash;break;}
+  }
+  if(!tx){
+    // Contract relayers can wrap a call; retain event lookup for those callers.
+    const logs=await rpc(env,'eth_getLogs',[{address:v.vault,fromBlock:tag,toBlock:tag,topics:[vaultInterface.getEvent(eventName).topicHash,v.payload.id]}]);
+    tx=logs.find(l=>!l.removed)?.transactionHash;
+  }
   if(!tx)throw new GameError('等待托管合约记录同步',409,'CONFIRMING');
   const r=await receipt(env,tx),entries=events(r,c,eventName).filter(e=>e.args.id===v.payload.id&&String(e.args.amount)===v.amount);
   if(BigInt(r.status)!==1n||entries.length!==1||(v.kind==='withdrawal'&&entries[0].args.recipient.toLowerCase()!==v.payload.recipient))throw new GameError('托管结算记录不匹配',409,'PAYOUT_REVIEW');

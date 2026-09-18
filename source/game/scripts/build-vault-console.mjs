@@ -1,0 +1,10 @@
+import { readFile, writeFile, mkdir } from 'node:fs/promises';
+import { build } from 'esbuild';
+const artifact=JSON.parse(await readFile(new URL('../artifacts/SheepGameVault.sol/SheepGameVault.json',import.meta.url),'utf8'));
+const target=new URL('../public/admin/pool/',import.meta.url);await mkdir(target,{recursive:true});
+await writeFile(new URL('contract.json',target),JSON.stringify({abi:artifact.abi,bytecode:artifact.bytecode.object,runtime:artifact.deployedBytecode.object,immutableReferences:artifact.deployedBytecode.immutableReferences}));
+const {compilationTarget,...settings}=artifact.metadata.settings;
+const sources=Object.fromEntries(await Promise.all(Object.keys(artifact.metadata.sources).map(async name=>[name,{content:await readFile(name,'utf8')}])));
+await writeFile(new URL('solidity-standard-input.json',target),JSON.stringify({language:'Solidity',sources,settings},null,2));
+await build({entryPoints:['scripts/browser/pool-console.js'],outfile:'public/admin/pool/app.js',bundle:true,minify:true,format:'esm',platform:'browser',target:'es2022',legalComments:'eof'});
+console.log('Built game pool wallet console. No private keys included.');

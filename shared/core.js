@@ -1,4 +1,4 @@
-import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-aae42cacec43';
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-c22646709831';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
 // The server decides every result and balance. This module only sends
 // requests, keeps the unconfirmed-operation record, and runs the account
@@ -20,9 +20,9 @@ import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './walle
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-aae42cacec43';
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-aae42cacec43';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-aae42cacec43';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-c22646709831';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-c22646709831';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-c22646709831';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -56,7 +56,7 @@ export function resultKind(round) {
 
 // Static Pages shows the same interface and sends wallet actions to the game site.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-aae42cacec43')).RULES : null;
+const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-c22646709831')).RULES : null;
 export async function api(path, data, key) {
   if (LOCAL) {
     if (path === '/config') return { rules: staticRules, payments: { enabled: false, symbol: '羊年吉祥' } };
@@ -214,6 +214,7 @@ export function createGame(ui) {
     }
     if (state.account?.rules && state.config) {
       state.config.rules = state.account.rules;
+      if (state.account.payments) state.config.payments = state.account.payments;
       if (state.account.withdrawalFee) state.config.payments.withdrawalFee = state.account.withdrawalFee;
       if (drawnVersion !== state.config.rules.version) {
         state.segments = buildWheelSegments(state.config.rules.outcomes);
@@ -336,7 +337,7 @@ export function createGame(ui) {
       try {
         watchNetwork();
         state.account = await loginBscWallet(window.ethereum, api); state.needsWalletLogin = false;
-        await checkNetwork(); ui.closeDialog(); render(); ui.notice('钱包已连接 BSC 主网'); features.offerReferral();
+        await checkNetwork(); ui.closeDialog(); render(); ui.notice('钱包已连接 BSC 主网'); features.offerReferral(); features.resume();
       } catch (e) { failure(e.code === 4001 ? new Error('你已取消钱包操作') : e); } finally { setBusy(false); }
     }));
     ui.openDialog('连接钱包', box);
@@ -381,7 +382,8 @@ export function createGame(ui) {
     if (state.account.mode !== 'token') return connectWallet();
     try {
       const result = await api('/payments'), box = el('div'), labels = { authorized: '待提交合约提现', queued: '待处理', submitted: '链上确认中', confirmed: '已到账', failed: '交易失败，已退回', rejected: '已退回余额' };
-      if (!result.deposits.length && !result.withdrawals.length) box.append(el('p', '暂无充值与提现记录'));
+      if (!result.deposits.length && !result.withdrawals.length && !result.pendingDeposits?.length) box.append(el('p', '暂无充值与提现记录'));
+      for (const d of result.pendingDeposits || []) { const row=el('div',undefined,'payment-row');row.append(el('p',d.status==='failed'?'充值未完成':'充值确认中'),el('p',d.error||'到账后自动更新余额'));const link=el('a','查看链上记录');link.href='https://bscscan.com/tx/'+d.tx_hash;link.target='_blank';link.rel='noopener noreferrer';row.append(link);box.append(row); }
       for (const d of result.deposits) box.append(el('p', '充值 +' + money(d.amount) + ' 币 · 已到账', 'payment-row'));
       for (const w of result.withdrawals) {
         const row = el('div', undefined, 'payment-row'); row.append(el('p', '提现 ' + money(w.amount) + ' 币 · ' + (labels[w.status] || w.status)));
@@ -400,7 +402,7 @@ export function createGame(ui) {
       state.segments = buildWheelSegments(state.config.rules.outcomes); ui.buildWheel(state.segments, state.config); drawnVersion = state.config.rules.version;
       try { state.account = playerAccount(await api('/account')); } catch (e) { if (e.status !== 401) throw e; state.account = playerAccount(null); }
       if (getPending()?.owner === 'demo') savePending(null);
-      await checkNetwork(); render(); features.offerReferral();
+      await checkNetwork(); render(); features.offerReferral(); features.resume();
     } catch (e) { ui.connectionError(e.message, init); }
   }
   window.ethereum?.on?.('accountsChanged', addresses => {

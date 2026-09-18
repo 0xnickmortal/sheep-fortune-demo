@@ -32,6 +32,8 @@ contract SheepGameVault is EIP712, Ownable2Step, Pausable, ReentrancyGuard {
     mapping(bytes32 => bool) public cancelled;
     uint256 public totalPaid;
     uint256 public totalBurned;
+    uint256 public totalDeposited;
+    uint256 public totalFunded;
     event Deposited(address indexed account, uint256 amount);
     event PoolFunded(address indexed funder, uint256 amount);
     event Withdrawn(bytes32 indexed id, address indexed recipient, uint256 amount);
@@ -45,8 +47,18 @@ contract SheepGameVault is EIP712, Ownable2Step, Pausable, ReentrancyGuard {
         require(IERC20Metadata(asset).decimals() == 18 && withdrawalLimit > 0 && burnLimit > 0, "invalid limits");
         token = IERC20(asset); signer = issuer; maxWithdrawal = withdrawalLimit; maxBurn = burnLimit; useTokenBurn = nativeBurn;
     }
-    function deposit(uint256 amount) external nonReentrant whenNotPaused { emit Deposited(msg.sender, _receive(amount)); }
-    function fundPool(uint256 amount) external nonReentrant whenNotPaused onlyOwner { emit PoolFunded(msg.sender, _receive(amount)); }
+    function deposit(uint256 amount) external nonReentrant whenNotPaused {
+        uint256 received = _receive(amount); totalDeposited += received; emit Deposited(msg.sender, received);
+    }
+    function fundPool(uint256 amount) external nonReentrant whenNotPaused onlyOwner {
+        uint256 received = _receive(amount); totalFunded += received; emit PoolFunded(msg.sender, received);
+    }
+    /// Cumulative direct income (game taxes and unsolicited transfers). Explicit
+    /// deposits/funding are excluded even before the off-chain ledger sees them.
+    /// Supported asset: fixed-balance ERC20, no rebasing or confiscation.
+    function directPoolIncome() external view returns (uint256) {
+        return token.balanceOf(address(this)) + totalPaid + totalBurned - totalDeposited - totalFunded;
+    }
     function _receive(uint256 amount) private returns (uint256 received) {
         require(amount > 0, "zero amount"); uint256 beforeBalance = token.balanceOf(address(this));
         token.safeTransferFrom(msg.sender, address(this), amount); received = token.balanceOf(address(this)) - beforeBalance;

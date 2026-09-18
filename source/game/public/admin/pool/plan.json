@@ -1,0 +1,11 @@
+{
+  "chainId": 56,
+  "token": "0xaf4d973fceacba24467c01ca8c8dd0e820b18732",
+  "owner": "0x0e6cFe55b8F1AC4e1E0377AD2b7078716aB06f34",
+  "signer": "0xbd0Ec3c9DBE22beb6C97581888cf454416329ceA",
+  "vault": "0x8Fd45A2B7582fe5bEc61b7aF959C69714baFA1B5",
+  "maxWithdrawal": "1000000",
+  "maxBurn": "100000",
+  "initialPool": "2000000",
+  "useTokenBurn": true
+}

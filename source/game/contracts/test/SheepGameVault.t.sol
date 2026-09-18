@@ -36,6 +36,7 @@ contract SheepGameVaultTest {
         token.setTax(1000);vm.prank(alice);token.approve(address(vault),1000 ether);
         uint256 beforeBalance=token.balanceOf(address(vault));vm.prank(alice);vault.deposit(1000 ether);
         require(token.balanceOf(address(vault))-beforeBalance==900 ether);
+        require(vault.totalDeposited()==900 ether && vault.directPoolIncome()==1000000 ether);
     }
     function testRelayCannotRedirectAndReplayFails() public {
         SheepGameVault.Withdrawal memory w=voucher(1000 ether);bytes memory sig=signature(vault.withdrawalDigest(w));
@@ -72,6 +73,7 @@ contract SheepGameVaultTest {
         SheepGameVault.Burn memory b=SheepGameVault.Burn(keccak256("burn"),100 ether,1000 ether,block.timestamp+3600,1);
         bytes memory sig=signature(vault.burnDigest(b));vm.prank(bob);vm.expectRevert();vault.executeBurn(b,sig);
         vault.executeBurn(b,sig);require(token.balanceOf(vault.DEAD())==100 ether&&vault.totalBurned()==100 ether);
+        require(vault.directPoolIncome()==1000000 ether);
         vm.expectRevert();vault.executeBurn(b,sig);
     }
     function testBurnRespectsReserveAndLimit() public {
@@ -84,6 +86,7 @@ contract SheepGameVaultTest {
         token.mint(address(nativeVault),1000 ether);uint256 supply=token.totalSupply();
         SheepGameVault.Burn memory b=SheepGameVault.Burn(keccak256("burn"),100 ether,900 ether,block.timestamp+3600,1);
         nativeVault.executeBurn(b,signature(nativeVault.burnDigest(b)));require(token.totalSupply()==supply-100 ether);
+        require(nativeVault.directPoolIncome()==1000 ether);
     }
     function testOwnerCannotSweepGameToken() public {
         (bool ok,)=address(vault).call(abi.encodeWithSignature("rescueTokens(address,uint256)",address(token),100 ether));require(!ok);

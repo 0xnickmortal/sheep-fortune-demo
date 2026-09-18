@@ -1,16 +1,18 @@
 # 羊年大吉：手机前端与链下游戏后端
 
-## Cloudflare 后台（2026-09-18）
+## 当前部署（2026-09-18）
 
-[打开云端后台体验版](https://sheep-fortune-game.lingolayer.workers.dev/)；运行 Workers + D1。钱包登录、转盘结算、金元宝及推荐接口已部署，真实充值、提现与真实游戏关闭。试玩账户不产生推荐返佣。[部署与验证步骤](docs/Cloudflare部署.md)。
+[游戏站点](https://sheep-fortune-game.lingolayer.workers.dev/) · [运营管理](https://sheep-fortune-game.lingolayer.workers.dev/admin/) · [白名单管理](https://sheep-fortune-game.lingolayer.workers.dev/admin/whitelist/)
 
-主站现在使用红金色手机界面；`public/folio`、`public/signal`、`public/orbit` 保留之前三个静态风格样稿，仅作历史设计参考，未接入正式账户。
+Cloudflare Workers + D1 已接入羊年吉祥代币和现有托管合约，200万初始奖池及游戏税收入已对账。已实现钱包充值、凭证提现、自动到账核对、过期提现返还和管理员钱包签名登录。当前仅项目管理员钱包开放真实资金验收，公开充提保持关闭。
+
+最新状态、操作方法与验证边界见 [充值提现与白名单接入](docs/充值提现与白名单接入_20260918.md)，以下历史实现说明如有状态冲突，以该接入记录为准。页面已移除测试入口、奖项说明块与概率表。GitHub Pages只展示界面，钱包操作跳转游戏站点，不使用浏览器本地余额结算。
 
 ## 启动
 
 Node 22.13+（本次使用 Node 25.4），`npm ci` 后 `npm run dev`，本地地址为 http://127.0.0.1:4318。本地持久数据库为忽略提交的 `.data/game.sqlite`。安装 Foundry（forge/anvil）后，`npm test` 编译托管合约并运行规则、账本、支付及本地EVM测试。`npm run contracts:test` 运行合约安全用例。`npm run build` 产出 Worker、静态页面与迁移。
 
-后端部署目标为 Sites Worker + D1（本次修改尚未发布），`.openai/hosting.json` 复用原站 ID。部署时应用已提交的 Drizzle 迁移；应用请求不会执行建表。`scripts/local-d1.mjs` 只用于本地预览和测试，不打包入 Worker。
+后端当前部署在 Cloudflare Workers + D1；`.openai/hosting.json` 保留原Sites站点配置。部署时应用已提交的 Drizzle 迁移；应用请求不会执行建表。`scripts/local-d1.mjs` 只用于本地预览和测试，不打包入 Worker。
 
 本次新增的托管合约、推荐入口、销毁批次及部署说明见 [托管合约与推荐返佣](docs/托管合约与推荐返佣.md)。
 
@@ -88,7 +90,7 @@ Node 22.13+（本次使用 Node 25.4），`npm ci` 后 `npm run dev`，本地地
 - `POST /api/deposits/prepare`（amount）、`GET /api/withdrawals/:id/authorization`
 - `GET /api/referrals`、`/api/referrals/resolve?code=...`，`POST /api/referrals/bind`（code）、`/api/referrals/activate`
 
-管理接口必须携带 `Authorization: Bearer <OPS_AUTH_KEY>`，密钥不得放在网页或客户端：
+管理接口支持项目管理员钱包签名会话（写请求需要同源保护）或 `Authorization: Bearer <OPS_AUTH_KEY>`；密钥不得写入前端配置：
 
 - `GET /api/admin/withdrawals` 待处理申请，amount、fee、payout 以币显示，外部签名必须使用 payout
 - `POST /api/admin/withdrawals/:id/attach`（rawTransaction）校验外部签名交易并先入库

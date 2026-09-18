@@ -43,6 +43,20 @@
       "when": 1789637835413,
       "tag": "0005_organic_beast",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1789716080129,
+      "tag": "0006_futuristic_sleeper",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1789724101051,
+      "tag": "0007_cool_susan_delgado",
+      "breakpoints": true
     }
   ]
 }

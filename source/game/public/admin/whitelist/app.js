@@ -1,16 +1,19 @@
+import {request,restore,login,beforeWrite,useKey,logout as clearAuth,watchWallet} from '../shared.js';
 const $ = id => document.getElementById(id);
 let adminKey = '', revision = 0, activeAddress = null, schema, cursor = null, busy = false;
 function status(message, error = false) { $('status').textContent = message; $('status').classList.toggle('invalid', error); }
 function setBusy(value) { busy = value; document.querySelectorAll('button').forEach(b => b.disabled = value); }
+let pendingSave = null;
 async function api(data, after = '') {
-  const response = await fetch('/api/admin/whitelist' + (after ? '?after=' + encodeURIComponent(after) : ''), {
-    method: data ? 'POST' : 'GET', cache: 'no-store', credentials: 'omit',
-    headers: { Authorization: 'Bearer ' + adminKey, ...(data ? { 'Content-Type': 'application/json', 'Idempotency-Key': crypto.randomUUID() } : {}) },
-    ...(data ? { body: JSON.stringify(data) } : {}),
-  });
-  let result; try { result = await response.json(); } catch { throw Error('此地址未接入游戏后端，请使用后端站点的管理入口'); }
-  if (!response.ok) throw Error(result.error || '读取失败');
-  return result;
+  if (data) {
+    await beforeWrite();
+    const body = JSON.stringify(data);
+    if (pendingSave && pendingSave.body !== body) throw Error('请先重试上次未确认的保存');
+    pendingSave ||= {body,key:crypto.randomUUID()};
+    try { const result=await request('/admin/whitelist',data,pendingSave.key);pendingSave=null;return result; }
+    catch(e){if(e.status&&e.status<500)pendingSave=null;throw e;}
+  }
+  return request('/admin/whitelist'+(after?'?after='+encodeURIComponent(after):''));
 }
 const weights = () => [...$('probabilities').querySelectorAll('input')].map(input => {
   if (!/^\d+(?:\.\d{1,2})?$/.test(input.value)) return NaN;
@@ -51,10 +54,10 @@ async function load(after = '') {
   if (!after && !activeAddress) edit();
 }
 $('login').onsubmit = async event => {
-  event.preventDefault(); if (busy) return; setBusy(true); adminKey = $('admin-key').value; $('admin-key').value = '';
+  event.preventDefault(); if (busy) return; setBusy(true); adminKey = $('admin-key').value; useKey(adminKey); $('admin-key').value = '';
   try { await load(); status('配置已读取。新增地址默认不启用。'); } catch (e) { status(e.message, true); } finally { setBusy(false); }
 };
-$('logout').onclick = () => { adminKey = ''; activeAddress = null; schema = null; $('admin-key').value = ''; $('entries').replaceChildren(); $('editor').hidden = true; $('entries-section').hidden = true; status('已退出管理'); };
+$('logout').onclick = () => { clearAuth(); adminKey = ''; pendingSave = null; activeAddress = null; schema = null; $('admin-key').value = ''; $('entries').replaceChildren(); $('editor').hidden = true; $('entries-section').hidden = true; status('已退出管理'); };
 $('new-entry').onclick = () => edit();
 $('more').onclick = async () => { setBusy(true); try { await load(cursor); } catch (e) { status(e.message, true); } finally { setBusy(false); } };
 $('policy-form').onsubmit = async event => {
@@ -65,3 +68,7 @@ $('policy-form').onsubmit = async event => {
   catch (e) { status(e.message, true); } finally { setBusy(false); }
 };
 window.addEventListener('pagehide', () => { adminKey = ''; });
+
+$('wallet-login').onclick=async()=>{if(busy)return;setBusy(true);try{await login();await load();status('管理员钱包已登录');}catch(e){status(e.message,true);}finally{setBusy(false);}};
+watchWallet(()=>{$('logout').click();status('钱包或网络已切换，请重新登录');});
+restore().then(s=>s&&load()).catch(e=>status(e.message,true));

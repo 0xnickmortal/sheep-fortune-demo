@@ -1,4 +1,4 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-aae42cacec43';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-c22646709831';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -6,7 +6,7 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-aae42cacec43',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-c22646709831',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   function sharing(box,code){
@@ -58,10 +58,51 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     throw Error('授权交易仍在确认，确认成功后再继续充值');
   }
   const depositKey=()=> 'sheep-vault-deposit:'+config().payments.vaultAddress+':'+account().wallet;
+  let transferBusy=false, monitor=null, monitoring=false;
+  async function checkSavedDeposit(hash, quiet=false) {
+    const owner=account()?.wallet;
+    try {
+      const result=await api('/deposits/track',{txHash:hash});
+      if(owner!==account()?.wallet)return;
+      if(result.status==='confirmed'){
+        try{localStorage.removeItem(depositKey());}catch{}
+        await refresh();notice('充值到账：'+money(result.amount)+' 币');
+        if(!quiet)openDialog('充值成功',money(result.amount)+' 币已进入游戏余额');
+      }else if(!quiet)notice('充值确认中，到账后自动更新余额');
+      return result;
+    }catch(e){
+      if(e.status>=400&&e.status<500&&e.status!==401&&e.code!=='CONFIRMING'){
+        try{if(localStorage.getItem(depositKey())===hash)localStorage.removeItem(depositKey());}catch{}
+        if(quiet)notice(e.message);
+      }
+      if(!quiet)throw e;
+    }
+  }
   function depositReview(hash){
-    const box=el('div');box.append(el('p','充值交易已提交，确认后会计入游戏余额。'),el('p',hash,'wallet-address'));
-    box.append(button('核对充值到账',async()=>{if(!canOperate())return;const result=await mutate('/deposits',{txHash:hash});try{localStorage.removeItem(depositKey());}catch{}await refresh();openDialog('充值成功',money(result.amount)+' 币已到账');}));
-    openDialog('充值确认中',box);
+    const box=el('div');box.append(el('p','充值已提交，等待链上确认后自动到账。可以关闭弹窗，稍后余额会自动更新。'));
+    const link=el('a','查看链上进度');link.href='https://bscscan.com/tx/'+hash;link.target='_blank';link.rel='noopener noreferrer';box.append(link);
+    box.append(button('刷新到账状态',()=>checkSavedDeposit(hash)));
+    openDialog('充值确认中',box);resume();
+  }
+  async function resume(){
+    if(monitoring||!account()?.wallet||!config()?.payments.enabled)return;
+    monitoring=true;const owner=account().wallet;
+    try{
+      let hash;try{hash=localStorage.getItem(depositKey());}catch{}
+      if(hash)await checkSavedDeposit(hash,true);
+      if(owner!==account()?.wallet)return;
+      const history=await api('/payments');
+      for(const w of history.withdrawals.filter(w=>w.status==='authorized').slice(0,3)){
+        if(owner!==account()?.wallet)return;
+        try{const r=await api('/withdrawals/'+w.id+'/check',{},'withdraw-monitor-'+w.id);if(r.status==='confirmed'||r.status==='rejected'){await refresh();notice(r.status==='confirmed'?'提现已到账':'未执行的提现已退回余额');}}catch{}
+      }
+      // A scheduled job may have finished before this tab checked history.
+      // Refresh both available and frozen balances even without pending rows.
+      if(owner===account()?.wallet)await refresh();
+    }catch{}finally{
+      monitoring=false;clearTimeout(monitor);
+      if(account()?.wallet&&config()?.payments.enabled)monitor=setTimeout(resume,15000);
+    }
   }
   function deposit(){
     const c=config().payments,box=el('div');let prior;try{prior=localStorage.getItem(depositKey());}catch{}
@@ -69,21 +110,25 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     box.append(el('p','充值进入游戏托管合约，按实际到账数量计入余额。请通过下方按钮充值，不要直接向合约地址转币。'));
     const label=el('label','充值数量（币）'),input=el('input');input.inputMode='decimal';input.placeholder='输入充值数量';label.append(input);box.append(label);
     box.append(button('授权并充值',async()=>{
-      if(!canOperate())return;const owner=account().wallet,prepared=await api('/deposits/prepare',{amount:input.value.trim()});
+      if(!canOperate()||transferBusy)return;transferBusy=true;
+      try { const owner=account().wallet,prepared=await api('/deposits/prepare',{amount:input.value.trim()});
       if(prepared.account!==owner||prepared.approval.to!==c.token||prepared.transaction.to!==c.vaultAddress)throw Error('充值配置不匹配，请刷新后再试');
-      await waitMined(await send(prepared.approval));
+      if(prepared.needsApproval!==false)await waitMined(await send(prepared.approval));
       if(account().wallet!==owner)throw Error('钱包已切换，请重新操作');
       const hash=await send(prepared.transaction);try{localStorage.setItem(depositKey(),hash);}catch{}depositReview(hash);
+      } finally { transferBusy=false; }
     }));
-    const manualLabel=el('label','已有充值交易？粘贴交易哈希'),manual=el('input');manual.placeholder='0x…';manualLabel.append(manual);box.append(manualLabel,button('核对已有充值',()=>{if(!/^0x[0-9a-fA-F]{64}$/.test(manual.value.trim()))throw Error('请输入完整交易哈希');depositReview(manual.value.trim());}));
-    box.append(el('small','钱包会确认授权和充值交易；链上 Gas 由钱包支付。'));
+    const manualLabel=el('label','已有充值交易？粘贴交易哈希'),manual=el('input');manual.placeholder='0x…';manualLabel.append(manual);box.append(manualLabel,button('核对已有充值',()=>{if(!/^0x[0-9a-fA-F]{64}$/.test(manual.value.trim()))throw Error('请输入完整交易哈希');try{localStorage.setItem(depositKey(),manual.value.trim());}catch{}depositReview(manual.value.trim());}));
+    box.append(el('small','钱包余额足够且授权充足时仅需确认充值；链上 Gas 由钱包支付。到账需等待 '+c.confirmations+' 个区块确认。'));
     openDialog('充值 '+c.symbol,box);
   }
   async function claimWithdrawal(wid){
-    if(!canOperate())return;const auth=await api('/withdrawals/'+wid+'/authorization');
+    if(!canOperate()||transferBusy)return;transferBusy=true;
+    try { const auth=await api('/withdrawals/'+wid+'/authorization');
     if(auth.recipient!==account().wallet||auth.transaction.to!==config().payments.vaultAddress)throw Error('提现凭证与当前钱包不匹配');
-    const hash=await send(auth.transaction);const box=el('div');box.append(el('p','提现交易已提交，转入 '+short(auth.recipient)),el('p',hash,'wallet-address'));
+    const hash=await send(auth.transaction);resume();const box=el('div');box.append(el('p','提现交易已提交，确认后自动更新记录。转入 '+short(auth.recipient)),el('p',hash,'wallet-address'));
     box.append(button('核对提现到账',async()=>{await mutate('/withdrawals/'+wid+'/check',{});await refresh();openDialog('提现状态已更新','请在充值与提现记录中查看。');}));openDialog('提现确认中',box);
+    } finally { transferBusy=false; }
   }
   function withdrawalSaved(result){
     const box=el('div');box.append(el('p','已冻结 '+money(result.amount)+' 币，手续费 '+money(result.fee)+' 币，预计到账 '+money(result.payout)+' 币。'));
@@ -94,5 +139,6 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     if(w.status!=='authorized')return [];
     return [button('提到钱包',()=>claimWithdrawal(w.id)),button('核对到账 / 过期退回',async()=>{if(!canOperate())return;const r=await mutate('/withdrawals/'+w.id+'/check',{});await refresh();openDialog('提现状态',r.status==='confirmed'?'提现已到账':'过期或已撤销的提现已退回游戏余额');})];
   }
-  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions};
+  window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
+  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions,resume};
 }
