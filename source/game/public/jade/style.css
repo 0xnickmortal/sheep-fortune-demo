@@ -279,3 +279,5 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 
 #protection-note{margin:6px 8px 22px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
 body:has(#protection-note:not([hidden])) .stage{width:min(calc(100% - 20px),calc(var(--wheel) - 20px))}
+
+.protection-link{display:inline-block;margin-left:5px;padding:2px 4px;font:inherit;color:inherit;background:transparent;border:0;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.protection-link:focus-visible{outline:2px solid currentColor;outline-offset:2px}

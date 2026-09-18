@@ -1,9 +1,9 @@
-import { protectionNotice, recoveryDetail } from './protection-view.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
+import { protectionNotice, recoveryDetail } from './protection-view.js?v=server-wheel-77-v13-20260917-1ec285117df8';
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
-import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-1ec285117df8';
+import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-1ec285117df8';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
@@ -47,7 +47,10 @@ export function mountSkin({ navSelector, startLabel = '转一下', longAfter = 6
       text('wallet-selection-status', v.busy ? '请在所选钱包中确认连接…' : '');
       text('deposit-open', '充值');
       const protectionNote = $('protection-note'), note = protectionNotice(a.protection, v.config.rules);
-      if (protectionNote) { protectionNote.textContent = note; protectionNote.hidden = !note; }
+      if (protectionNote) {
+        protectionNote.replaceChildren(el('span', note)); protectionNote.hidden = !note;
+        if (note) { const info = el('button', '补偿说明', 'protection-link'); info.type = 'button'; info.onclick = () => game.protectionInfo(); protectionNote.append(info); }
+      }
       for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === v.bet; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); }
       $('start').disabled = !v.canPlay; $('start').firstElementChild.textContent = v.startLabel || startLabel; text('start-cost', '本局投入 ' + v.startCost + ' 币');
       for (const b of document.querySelectorAll('#bet-choices button, #deposit-open, #withdraw-open')) b.disabled = v.lockControls;

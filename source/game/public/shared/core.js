@@ -297,8 +297,11 @@ export function createGame(ui) {
     box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需再次点击开始才会下注。'));
     box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按 1:1 获得金元宝。例如投入 1,000 币，分别获得 1,000 或 500 金元宝。1 倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
     box.append(el('p', '每局代币返还和金元宝均自动到账，无需手动领取。每一局按抽中的倍率判断手续费，费用按代币最小单位向下取整。提币不收取游戏手续费。金元宝与代币分别记账，不能用于下注或直接提币；兑换尚未开放，后续规则另行公布。'));
-    if (state.config.rules.protection?.enabled) box.append(el('h3', '前5把补偿规则'), el('p', INTRO_RECOVERY_TERMS));
     ui.openDialog('转盘玩法', box);
+  }
+  function protectionInfo() {
+    if (!state.config?.rules.protection?.enabled) return;
+    ui.openDialog('补偿说明', el('p', INTRO_RECOVERY_TERMS));
   }
   function selectBet(value) { if (!QUICK_BETS.includes(value)) return; state.bet = value; render(); }
   async function showRound(round) {
@@ -509,7 +512,7 @@ export function createGame(ui) {
     } catch (e) { ui.connectionError(e.message, init); }
   }
   // No idle polling: page reload and explicit wallet/account actions refresh balances.
-  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
+  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, rules, protectionInfo, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
 }
 
 // Generic record rows shared by both frontends; each theme styles the classes.

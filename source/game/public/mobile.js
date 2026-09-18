@@ -1,4 +1,3 @@
-import { INTRO_RECOVERY_TERMS } from './shared/protection-view.js';
 import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './shared/wallet-network.js';
 import { accountFeatures } from './shared/account-features.js';
 import { createWheel, buildWheelSegments, landingIndex } from './wheel.js?v=6';
@@ -101,7 +100,6 @@ function rules() {
   box.append(el('p', '数字倍率表示包含本金、扣费前的返还倍数。抽中大于 1 倍的奖项，在本局结算时收取投入金额的 5%；小于或等于 1 倍不收费。例：投入 500 币，1.2 倍返还 600 币，扣 25 币，实得 575 币；1.5 倍扣 25 币，实得 725 币。'));
   box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需点击“转一下”才会下注。'));
   box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按1:1获得金元宝。例如投入1,000币，分别获得1,000或500金元宝。1倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
-  if (config?.rules.protection?.enabled) box.append(el('h3', '前5把补偿规则'), el('p', INTRO_RECOVERY_TERMS));
   if (config?.rules.outcomes) {
     box.append(el('h3', '本版各倍率概率'));
     const table = el('table', undefined, 'wheel-probability-table'), header = el('tr');
