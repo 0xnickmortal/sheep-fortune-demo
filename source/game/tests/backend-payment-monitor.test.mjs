@@ -35,6 +35,15 @@ test('wallet administration and automatic custody reconciliation',async t=>{
   assert.equal((await(await worker.fetch(req(b,'/account'),acceptance)).json()).benefits.withdrawalFeeExempt,true);
   const off=await worker.fetch(req(a,'/admin/whitelist',{...data,enabled:false,revision:saved.revision}),acceptance);assert.equal(off.status,200);
  });
+ await t.test('a stale tab cannot read or debit another wallet after the shared login cookie changes',async()=>{
+  const before=await getState(db,a.owner);
+  for(const [path,data] of [['/account',undefined],['/play',{amount:'500',rulesVersion:RULES.version}],['/withdrawals/quote',{amount:'10'}]]){
+   const request=req(a,path,data);request.headers.set('X-Game-Wallet',b.address);
+   const response=await worker.fetch(request,acceptance);assert.equal(response.status,409);assert.equal((await response.json()).code,'WALLET_CHANGED');
+  }
+  assert.deepEqual(await getState(db,a.owner),before);
+  const matching=req(a,'/account');matching.headers.set('X-Game-Wallet',a.address.toUpperCase());assert.equal((await worker.fetch(matching,acceptance)).status,200);
+ });
  await t.test('deposit preparation checks wallet funds, approval and pause state',async()=>{
   let p=await prepareVaultDeposit(db,env,a.owner,'50');assert.equal(p.needsApproval,true);
   await(await token.connect(a.signer).approve(v,parseEther('500'))).wait();

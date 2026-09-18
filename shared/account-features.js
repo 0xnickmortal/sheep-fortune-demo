@@ -1,4 +1,4 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-82a8708ffe9a';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -6,8 +6,8 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-f116db43bfca',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
-export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate}) {
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-82a8708ffe9a',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate,walletProvider=()=>window.ethereum}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   function sharing(box,code){
     const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('ref',code);
@@ -50,11 +50,11 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
   function offerReferral(){if(account()?.mode==='token'&&account()?.referral?.canBind&&pendingInvite()){invite().catch(e=>notice(e.message));return true;}return false;}
   async function connectedWallet(){
     if(!canOperate())throw Error('请重新签名连接当前钱包');
-    return bscWallet(window.ethereum,{expectedAddress:account().wallet});
+    return bscWallet(walletProvider(),{expectedAddress:account().wallet});
   }
-  async function send(transaction){const from=await connectedWallet();return ethereum.request({method:'eth_sendTransaction',params:[{...transaction,from}]});}
+  async function send(transaction){const from=await connectedWallet();return walletProvider().request({method:'eth_sendTransaction',params:[{...transaction,from}]});}
   async function waitMined(hash){
-    for(let i=0;i<45;i++){const r=await ethereum.request({method:'eth_getTransactionReceipt',params:[hash]});if(r){if(BigInt(r.status)!==1n)throw Error('链上交易未成功，请在钱包中查看');return;}await new Promise(r=>setTimeout(r,2000));}
+    for(let i=0;i<45;i++){const r=await walletProvider().request({method:'eth_getTransactionReceipt',params:[hash]});if(r){if(BigInt(r.status)!==1n)throw Error('链上交易未成功，请在钱包中查看');return;}await new Promise(r=>setTimeout(r,2000));}
     throw Error('授权交易仍在确认，确认成功后再继续充值');
   }
   const depositKey=()=> 'sheep-vault-deposit:'+config().payments.vaultAddress+':'+account().wallet;
@@ -140,5 +140,5 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     return [button('提到钱包',()=>claimWithdrawal(w.id)),button('核对到账 / 过期退回',async()=>{if(!canOperate())return;const r=await mutate('/withdrawals/'+w.id+'/check',{});await refresh();openDialog('提现状态',r.status==='confirmed'?'提现已到账':'过期或已撤销的提现已退回游戏余额');})];
   }
   window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
-  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions,resume};
+  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions,resume,isTransferring:()=>transferBusy,pause:()=>{clearTimeout(monitor);monitor=null;}};
 }

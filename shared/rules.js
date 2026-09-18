@@ -1,4 +1,4 @@
-import { MODEL } from './bags.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { MODEL } from './bags.js?v=server-wheel-77-v13-20260917-82a8708ffe9a';
 export const UNIT=10n**18n;
 export const WHEEL_OUTCOMES = Object.freeze([
  // displaySlots controls the repeated visual layout only; weight controls draws.

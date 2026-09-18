@@ -82,6 +82,11 @@ async function api(request, env) {
     throw new GameError('接口不存在', 404);
   }
   const owner = await requireOwner(db, request);
+  const expectedWallet = request.headers.get('x-game-wallet');
+  if (expectedWallet) {
+    const account = await first(db, 'SELECT wallet FROM accounts WHERE id=?', owner);
+    if (account?.wallet?.toLowerCase() !== expectedWallet.toLowerCase()) throw new GameError('登录钱包已改变，请断开后重新选择钱包', 409, 'WALLET_CHANGED');
+  }
   if (route === 'GET /api/account') return json(await playerState(db, env, owner));
   env = await accountEnvironment(db, env, owner);
   if (route === 'GET /api/referrals') return json(await referralSummary(db, owner));

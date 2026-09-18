@@ -1,8 +1,8 @@
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-f116db43bfca';
-import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-f116db43bfca';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-82a8708ffe9a';
+import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-82a8708ffe9a';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
@@ -29,7 +29,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       text('wallet-address', a.wallet || '尚未连接钱包');
       const connected = !v.guest && !v.needsWalletLogin && !v.needsBscNetwork;
       const holdings = v.walletBalance;
-      const walletLabel = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : a.wallet.slice(0, 6) + '…' + a.wallet.slice(-4);
+      const walletLabel = v.needsWalletLogin ? '选择其他钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : a.wallet.slice(0, 6) + '…' + a.wallet.slice(-4);
       const holdingLabel = !connected ? '查看持币数量' : holdings.value !== null ? '持有 ' + compactTokenBalance(holdings.value) + ' 枚' : holdings.status === 'error' ? '余额暂不可用' : '正在读取余额…';
       text('wallet-top-label', walletLabel); text('wallet-top-balance', holdingLabel);
       const topWallet = $('wallet-top');
@@ -40,13 +40,16 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
         topWallet.disabled = v.busy;
       }
       text('wallet-balance-detail', !connected ? '请重新连接 BSC 钱包' : holdings.value !== null ? money(holdings.value) + ' 枚' : holdings.status === 'error' ? '读取失败，请点击刷新重试' : '正在读取…');
-      $('wallet-connect').firstElementChild.textContent = v.needsWalletLogin ? '重新连接钱包' : v.needsBscNetwork ? '切换到 BSC' : v.guest ? '连接钱包' : '重新连接钱包';
+      $('wallet-connect').firstElementChild.textContent = v.guest ? '连接钱包' : '断开连接';
+      $('wallet-connect').disabled = v.busy;
+      for (const choice of document.querySelectorAll('.wallet-choices button')) choice.disabled = v.busy;
+      text('wallet-selection-status', v.busy ? '请在所选钱包中确认连接…' : '');
       text('deposit-open', '充值');
       if ($('admin-entry')) $('admin-entry').hidden = !a.admin;
       for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === v.bet; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); }
       const custom = $('custom-bet'); custom.classList.toggle('chosen', v.isCustom); custom.setAttribute('aria-pressed', String(v.isCustom)); custom.firstElementChild.textContent = v.isCustom ? money(v.bet) : customLabel;
       $('start').disabled = !v.canPlay; $('start').firstElementChild.textContent = v.startLabel || startLabel; text('start-cost', '本局投入 ' + v.startCost + ' 币');
-      for (const b of document.querySelectorAll('#bet-choices button, #wallet-connect, #deposit-open, #withdraw-open')) b.disabled = v.lockControls;
+      for (const b of document.querySelectorAll('#bet-choices button, #deposit-open, #withdraw-open')) b.disabled = v.lockControls;
       const box = $('connection-message'); box.replaceChildren();
       if (v.needsBscNetwork) { const retry = el('button', '切换到 BSC 主网', 'dialog-primary'); retry.type = 'button'; retry.disabled = v.busy; retry.onclick = v.switchNetwork; box.append(el('p', '请将钱包切换到 BSC 主网后继续。'), retry); }
       if (v.pending) { box.append(el('p', '上次操作还未确认，请先重试。')); const retry = el('button', '核对上次操作', 'dialog-primary'); retry.type = 'button'; retry.disabled = v.busy; retry.onclick = v.retry; box.append(retry); }
@@ -109,7 +112,7 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
   $('rules-open').onclick = () => game.rules();
   $('dialog-close').onclick = closeDialog;
   $('dialog').addEventListener('click', e => { if (e.target === $('dialog')) closeDialog(); });
-  $('wallet-connect').onclick = () => game.connectWallet();
+  $('wallet-connect').onclick = () => game.state.account?.mode === 'token' ? game.disconnectWallet() : game.connectWallet();
   if ($('wallet-top')) $('wallet-top').onclick = () => game.connectWallet();
   $('deposit-open').onclick = () => game.deposit();
   $('withdraw-open').onclick = () => game.withdraw();
