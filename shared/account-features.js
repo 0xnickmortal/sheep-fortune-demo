@@ -1,15 +1,61 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
-import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { createReferralMonitor, referralTotal } from './referral-monitor.js?v=server-wheel-77-v13-20260917-3003acd5632b';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
-const money=n=>String(n??'0').replace(/\B(?=(\d{3})+(?!\d))/g,',');
+const money=n=>{const [whole,fraction='']=String(n??'0').split('.');return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(fraction?'.'+fraction:'');};
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
 const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-4c74afb9b3be',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-3003acd5632b',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate,walletProvider=()=>window.ethereum}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
+  let referralCard, referralDetails, referralData, referralNotice='', referralUpdated='', referralError='';
+  const referrals=createReferralMonitor({
+    fetchSummary:()=>api('/referrals'),
+    onCredit:amount=>{referralNotice='新返佣 +'+money(amount)+' 币，已入游戏余额';notice(referralNotice);void refresh().catch(()=>{});},
+    onUpdate:data=>{referralData=data;referralError='';referralUpdated=new Date().toLocaleTimeString('zh-CN');paintReferrals();},
+    onError:()=>{referralError='暂时无法更新，请稍后重试';paintReferrals();},
+  });
+  function syncAccount(){
+    const owner=account()?.mode==='token'?account().wallet:null;
+    let changed=referrals.setOwner(owner);
+    if(changed){
+      referralData=null;referralNotice='';referralUpdated='';referralError='';
+      if(referralDetails?.isConnected)referralDetails.replaceChildren(el('p','钱包已切换，请重新打开邀请好友。'));
+      referralDetails=null;
+    }
+    const entry=document.getElementById('invite-open');
+    if(!referralCard&&entry){referralCard=el('section',undefined,'referral-card');referralCard.id='referral-summary';referralCard.setAttribute('aria-label','我的返佣');entry.before(referralCard);changed=true;}
+    if(referralCard){referralCard.hidden=!owner;if(changed)paintReferralCard();}
+  }
+  function summaryLine(){
+    return referralError||(referralUpdated?'已更新 '+referralUpdated+' · 每15秒自动刷新':'正在读取返佣记录…');
+  }
+  function creditStatus(){
+    const status=el('p',referralNotice,'referral-credit-status');status.setAttribute('role','status');return status;
+  }
+  function paintReferralCard(){
+    if(!referralCard)return;
+    const title=el('div',undefined,'referral-heading');title.append(el('h2','累计返佣'));
+    const details=button('查看明细',async()=>{await invite();referralDetails?.scrollIntoView({block:'start'});});details.className='referral-action';title.append(details);
+    const total=el('strong',referralData?money(referralTotal(referralData))+' 币':'—','referral-total');
+    const split=el('p',referralData?'直推 '+money(referralData.directEarned)+' 币 · 间推 '+money(referralData.indirectEarned)+' 币':'直推与间推奖励汇总','referral-split');
+    referralCard.replaceChildren(title,total,split,creditStatus(),el('p','已计入游戏余额，可继续玩或提现；累计返佣不等于当前可提现余额。','referral-note'),el('small',summaryLine(),'referral-update'));
+  }
+  function paintReferralDetails(){
+    if(!referralDetails?.isConnected||!referralData)return;
+    const data=referralData,heading=el('div',undefined,'referral-heading');heading.append(el('h3','我的返佣'));
+    const reload=button('刷新返佣',async()=>{await referrals.refresh();await refresh();});reload.className='referral-action';heading.append(reload);
+    const total=el('div',undefined,'referral-detail-total');total.append(el('span','累计返佣'),el('strong',money(referralTotal(data))+' 币'));
+    const totals=el('div',undefined,'invite-stats');
+    for(const [label,count,value] of [['直推',data.directCount,data.directEarned],['间推',data.indirectCount,data.indirectEarned]]){const card=el('div');card.append(el('small',label+' · '+count+' 人'),el('strong',money(value)+' 币'),el('small','累计已入游戏余额'));totals.append(card);}
+    referralDetails.replaceChildren(heading,total,totals,creditStatus(),el('p','返佣已计入游戏余额，可继续玩或提现。提现经链上确认后，代币才进入钱包；累计返佣不会因下注或提现而减少。','referral-note'),el('small',summaryLine(),'referral-update'),el('h3','最近50笔返佣'));
+    if(!data.records.length)referralDetails.append(el('p','暂未产生返佣。好友确认绑定并开始游戏后，返佣会自动显示在这里。'));
+    for(const r of data.records){const row=el('div',undefined,'invite-record');row.append(el('span',(r.level===1?'直推':'间推')+' · '+short(r.player)),el('strong','+'+money(r.amount)+' 币'),el('small','好友下注 '+money(r.stake)+' 币 · 已入游戏余额'),el('small',new Date(r.createdAt).toLocaleString('zh-CN')));referralDetails.append(row);}
+  }
+  function paintReferrals(){paintReferralCard();paintReferralDetails();}
   function sharing(box,code){
     const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('ref',code);
     const label=el('label','我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);input.className='copy-link-field';input.onclick=()=>selectCopyText(input);label.append(input);box.append(label);
@@ -25,7 +71,9 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     if(navigator.share)box.append(button('分享给好友',async()=>{try{await navigator.share({title:'羊年大吉 · 邀请好友',url:url.href});}catch(e){if(e.name!=='AbortError')throw e;}}));
   }
   async function invite(){
-    const box=el('div',undefined,'invite-center'),data=await api('/referrals');
+    syncAccount();
+    const box=el('div',undefined,'invite-center'),data=await referrals.refresh();
+    if(!data)return;
     box.append(el('p','邀请好友，一起转出好运','invite-lead'));
     if(!data.supported){
       box.append(el('p','请连接钱包并完成一局游戏，再生成邀请链接。'));
@@ -48,13 +96,9 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
       sharing(box,data.code);
     }else if(data.eligible)box.append(button('生成我的邀请链接',async()=>{if(!canOperate())return;await mutate('/referrals/activate',{});await refresh();await invite();}));
     else box.append(el('p','完成一局游戏后，即可生成自己的邀请链接。','invite-hint'));
-    box.append(el('h3','我的邀请与奖励'));
-    const totals=el('div',undefined,'invite-stats');
-    for(const [label,count,amount] of [['直推',data.directCount,data.directEarned],['间推',data.indirectCount,data.indirectEarned]]){const card=el('div');card.append(el('small',label+' '+count+' 人'),el('strong',money(amount)),el('small','币 · 累计奖励'));totals.append(card);}box.append(totals);
-    box.append(el('h3','最近奖励记录'));
-    if(!data.records.length)box.append(el('p','好友开始游戏后，奖励会显示在这里。'));
-    for(const r of data.records){const row=el('div',undefined,'invite-record');row.append(el('span',(r.level===1?'直推':'间推')+' · '+short(r.player)),el('strong','+'+money(r.amount)+' 币'),el('small',new Date(r.createdAt).toLocaleString('zh-CN')));box.append(row);}
+    referralDetails=el('section',undefined,'referral-details');box.append(referralDetails);
     openDialog('邀请好友',box);
+    paintReferralDetails();
   }
   function offerReferral(){if(account()?.mode==='token'&&account()?.referral?.canBind&&pendingInvite()){invite().catch(e=>notice(e.message));return true;}return false;}
   async function connectedWallet(){
@@ -94,9 +138,12 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     openDialog('充值确认中',box);resume();
   }
   async function resume(){
-    if(monitoring||!account()?.wallet||!config()?.payments.enabled)return;
+    syncAccount();
+    if(monitoring||!account()?.wallet||document.hidden)return;
     monitoring=true;const owner=account().wallet;
     try{
+      try{await referrals.refresh();}catch{}
+      if(owner!==account()?.wallet||!config()?.payments.enabled)return;
       let hash;try{hash=localStorage.getItem(depositKey());}catch{}
       if(hash)await checkSavedDeposit(hash,true);
       if(owner!==account()?.wallet)return;
@@ -110,7 +157,7 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
       if(owner===account()?.wallet)await refresh();
     }catch{}finally{
       monitoring=false;clearTimeout(monitor);
-      if(account()?.wallet&&config()?.payments.enabled)monitor=setTimeout(resume,15000);
+      if(account()?.wallet&&!document.hidden)monitor=setTimeout(resume,15000);
     }
   }
   function deposit(){
@@ -149,5 +196,5 @@ export function accountFeatures({api,mutate,account,config,refresh,openDialog,no
     return [button('提到钱包',()=>claimWithdrawal(w.id)),button('核对到账 / 过期退回',async()=>{if(!canOperate())return;const r=await mutate('/withdrawals/'+w.id+'/check',{});await refresh();openDialog('提现状态',r.status==='confirmed'?'提现已到账':'过期或已撤销的提现已退回游戏余额');})];
   }
   window.addEventListener('focus',resume);document.addEventListener('visibilitychange',()=>{if(!document.hidden)resume();});
-  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions,resume,isTransferring:()=>transferBusy,pause:()=>{clearTimeout(monitor);monitor=null;}};
+  return {invite,offerReferral,deposit,withdrawalSaved,withdrawalActions,resume,syncAccount,isTransferring:()=>transferBusy,pause:()=>{clearTimeout(monitor);monitor=null;referrals.setOwner(null);referralData=null;referralNotice='';referralDetails=null;}};
 }

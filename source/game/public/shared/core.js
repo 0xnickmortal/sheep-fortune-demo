@@ -246,6 +246,7 @@ export function createGame(ui) {
       }
     }
     ui.render(view());
+    features.syncAccount();
   }
   function setBusy(value) { state.busy = value; render(); }
   async function refresh() { const generation = authGeneration; const response = await api('/account'); if (generation !== authGeneration) return; const fresh = playerAccount(response); if (!state.account || fresh.mode !== state.account.mode || fresh.wallet !== state.account.wallet || fresh.revision >= state.account.revision) state.account = fresh; render(); void refreshWalletBalance(); }

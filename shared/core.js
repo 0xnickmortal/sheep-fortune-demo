@@ -1,5 +1,5 @@
-import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
-import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
+import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-3003acd5632b';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
 // The server decides every result and balance. This module only sends
 // requests, keeps the unconfirmed-operation record, and runs the account
@@ -21,9 +21,9 @@ import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletToke
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-4c74afb9b3be';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-3003acd5632b';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -57,7 +57,7 @@ export function resultKind(round) {
 
 // Static Pages shows the same interface and sends wallet actions to the game site.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-4c74afb9b3be')).RULES : null;
+const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-3003acd5632b')).RULES : null;
 let accountWallet = null, onWalletMismatch = () => {};
 export async function api(path, data, key) {
   if (LOCAL) {
@@ -246,6 +246,7 @@ export function createGame(ui) {
       }
     }
     ui.render(view());
+    features.syncAccount();
   }
   function setBusy(value) { state.busy = value; render(); }
   async function refresh() { const generation = authGeneration; const response = await api('/account'); if (generation !== authGeneration) return; const fresh = playerAccount(response); if (!state.account || fresh.mode !== state.account.mode || fresh.wallet !== state.account.wallet || fresh.revision >= state.account.revision) state.account = fresh; render(); void refreshWalletBalance(); }
