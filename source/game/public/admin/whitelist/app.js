@@ -57,7 +57,7 @@ $('login').onsubmit = async event => {
   event.preventDefault(); if (busy) return; setBusy(true); adminKey = $('admin-key').value; useKey(adminKey); $('admin-key').value = '';
   try { await load(); status('配置已读取。新增地址默认不启用。'); } catch (e) { status(e.message, true); } finally { setBusy(false); }
 };
-$('logout').onclick = () => { clearAuth(); adminKey = ''; pendingSave = null; activeAddress = null; schema = null; $('admin-key').value = ''; $('entries').replaceChildren(); $('editor').hidden = true; $('entries-section').hidden = true; status('已退出管理'); };
+$('logout').onclick = async () => { adminKey = ''; pendingSave = null; activeAddress = null; schema = null; $('admin-key').value = ''; $('entries').replaceChildren(); $('editor').hidden = true; $('entries-section').hidden = true; try{await clearAuth();status('已退出管理');}catch(e){status('未能完成退出，请重试：'+e.message,true);} };
 $('new-entry').onclick = () => edit();
 $('more').onclick = async () => { setBusy(true); try { await load(cursor); } catch (e) { status(e.message, true); } finally { setBusy(false); } };
 $('policy-form').onsubmit = async event => {

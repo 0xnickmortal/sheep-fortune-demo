@@ -1,4 +1,4 @@
-import {request,restore,login,beforeWrite,watchWallet,tokens} from './shared.js';
+import {request,restore,login,logout,beforeWrite,watchWallet,tokens} from './shared.js';
 const $=id=>document.getElementById(id),el=(tag,text)=>{const n=document.createElement(tag);n.textContent=text;return n;};
 let busy=false;
 function status(s,error=false){$('status').textContent=s;$('status').classList.toggle('invalid',error);}
@@ -17,6 +17,7 @@ async function load(){
  status(pool.live?'公开充值提现已开放':'公开充值提现暂未开放；管理员可进行接入验收。');
 }
 $('connect').onclick=()=>action(async()=>{const s=await login();$('identity').textContent=s.wallet;await load();});
+$('logout').onclick=()=>action(async()=>{await logout();$('identity').textContent='';$('overview').hidden=true;$('records-section').hidden=true;status('已退出管理');});
 $('refresh').onclick=()=>action(load);
 $('sync').onclick=()=>action(async()=>{await beforeWrite();await request('/admin/pool/sync',{});await request('/admin/payments/sync',{});await load();});
 watchWallet(()=>{$('overview').hidden=true;$('records-section').hidden=true;status('钱包或网络已切换，请重新登录');});

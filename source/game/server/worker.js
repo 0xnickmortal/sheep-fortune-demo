@@ -1,7 +1,7 @@
 import { withdrawalView } from './withdrawal-fee.js';
 import { GameError, RULES, formatAmount } from './rules.js';
 import { first, all } from './db.js';
-import { demoLogin, challenge, walletLogin, requireOwner, tokenAsset } from './auth.js';
+import { demoLogin, challenge, walletLogin, walletLogout, requireOwner, tokenAsset } from './auth.js';
 import { listWhitelist, saveWhitelist } from './whitelist.js';
 import { poolStatus, syncPoolIncome } from './pool.js';
 import { authorizeAdmin, isAdminAccount, accountEnvironment, adminWallet } from './admin-auth.js';
@@ -54,6 +54,7 @@ async function api(request, env) {
   if (route === 'GET /api/config') return json({ rules: RULES, payments: paymentConfig(env), referrals: REFERRAL_RULES });
   if (route === 'POST /api/auth/demo') { const login = await demoLogin(db, request, env); return json(await getState(db, login.owner), 200, login.cookie ? { 'Set-Cookie': login.cookie } : {}); }
   if (route === 'POST /api/auth/challenge') return json(await challenge(db, request, data.address));
+  if (route === 'POST /api/auth/logout') return json({loggedOut:true},200,{'Set-Cookie':await walletLogout(db,request)});
   if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await playerState(db, env, login.owner), 200, { 'Set-Cookie': login.cookie }); }
   if (isAdmin) {
     if (route === 'GET /api/admin/session') return json({admin:true,wallet:adminWallet(env),payments:paymentConfig(env),validation:env.PAYMENTS_VALIDATION_ENABLED==='true'});

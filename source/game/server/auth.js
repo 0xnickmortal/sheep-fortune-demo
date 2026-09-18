@@ -9,6 +9,7 @@ export const cookieToken=request=>{const cookies=(request.headers.get('cookie')|
 export const newToken=()=>Array.from(crypto.getRandomValues(new Uint8Array(32)),x=>x.toString(16).padStart(2,'0')).join('');
 export const cookie=(token,request)=>`${COOKIE}=${token}; Path=/; HttpOnly; SameSite=Strict; Max-Age=86400${new URL(request.url).protocol==='https:'?'; Secure':''}`;
 export async function sessionOwner(db,request){const token=cookieToken(request);if(!token)return null;const row=await first(db,'SELECT owner FROM sessions WHERE hash=? AND expires_at>?',await hash(token),Date.now());return row?.owner??null;}
+export async function walletLogout(db,request){const token=cookieToken(request);if(token)await stmt(db,'DELETE FROM sessions WHERE hash=?',await hash(token)).run();return `${COOKIE}=; Path=/; HttpOnly; SameSite=Strict; Max-Age=0${new URL(request.url).protocol==='https:'?'; Secure':''}`;}
 export async function requireOwner(db,request){const owner=await sessionOwner(db,request);if(!owner)throw new GameError('登录已过期，请重新进入游戏',401,'LOGIN_REQUIRED');return owner;}
 export async function demoLogin(db,request,env={}){const old=await sessionOwner(db,request);if(old){const a=await first(db,'SELECT asset FROM accounts WHERE id=?',old);if(a?.asset==='demo')return {owner:old,cookie:null};}
  // Only an authenticated platform proxy may provide identity headers. Public

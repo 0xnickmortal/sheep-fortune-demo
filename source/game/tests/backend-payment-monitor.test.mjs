@@ -90,4 +90,10 @@ test('wallet administration and automatic custody reconciliation',async t=>{
   assert.equal((await first(db,'SELECT status FROM withdrawals WHERE id=?',w.id)).status,'rejected');
   assert.equal((await getState(db,a.owner)).balance,'10150');assert.equal((await audit(db)).ok,true);
  });
+ await t.test('logout revokes the signed session on the server, even if its old cookie is replayed',async()=>{
+  const result=await worker.fetch(req(a,'/auth/logout',{}),acceptance);assert.equal(result.status,200);
+  assert.match(result.headers.get('Set-Cookie'),/Max-Age=0/);
+  assert.equal((await worker.fetch(req(a,'/admin/session'),acceptance)).status,403);
+  assert.equal((await worker.fetch(req(a,'/account'),acceptance)).status,401);
+ });
 });

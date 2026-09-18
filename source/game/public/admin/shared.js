@@ -7,7 +7,7 @@ export async function request(path, data, operationKey) {
   return result;
 }
 export function useKey(value) { secret = value; session = null; }
-export function logout() { secret='';session=null; }
+export async function logout() { const pending=request('/auth/logout',{});secret='';session=null;await pending; }
 export async function restore() { try { session=await request('/admin/session');return session; } catch(e) { if(e.status===403||e.status===401)return null;throw e; } }
 export async function login() {
   if(!window.ethereum?.request)throw Error('请在支持 BSC 的钱包浏览器打开此页面');
@@ -20,4 +20,4 @@ export async function beforeWrite() {
 }
 export function watchWallet(onChange) { window.ethereum?.on?.('accountsChanged',()=>{session=null;onChange();});window.ethereum?.on?.('chainChanged',()=>{session=null;onChange();}); }
 export const tokens = raw => { const n=BigInt(raw||0),whole=n/10n**18n,f=(n%10n**18n).toString().padStart(18,'0').replace(/0+$/,'');return whole.toLocaleString('en-US')+(f?'.'+f:''); };
-window.addEventListener('pagehide',logout);
+window.addEventListener('pagehide',()=>{secret='';session=null;});
