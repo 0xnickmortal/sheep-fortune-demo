@@ -1,5 +1,5 @@
-import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-3003acd5632b';
-import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
+import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
 // The server decides every result and balance. This module only sends
 // requests, keeps the unconfirmed-operation record, and runs the account
@@ -21,9 +21,9 @@ import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletToke
 //   renderRecords(rounds)
 //   renderIngots(result)
 //   connectionError(message, retry)
-import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-3003acd5632b';
-import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-3003acd5632b';
-import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { accountFeatures } from './account-features.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
+import { buildWheelSegments, landingIndex, stopAngle } from '../wheel.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
+import { sectorText, resultText } from '../outcome-view.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
@@ -57,7 +57,7 @@ export function resultKind(round) {
 
 // Static Pages shows the same interface and sends wallet actions to the game site.
 const LOCAL = typeof document !== 'undefined' && !!document.querySelector('meta[name="sheep-backend"][content="local"]');
-const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-3003acd5632b')).RULES : null;
+const staticRules = LOCAL ? (await import('./rules.js?v=server-wheel-77-v13-20260917-6f807d16cf94')).RULES : null;
 let accountWallet = null, onWalletMismatch = () => {};
 export async function api(path, data, key) {
   if (LOCAL) {
@@ -385,7 +385,7 @@ export function createGame(ui) {
     if (!ready()) return;
     if (state.busy) return;
     if (LOCAL) {
-      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://sheep-fortune-game.lingolayer.workers.dev/');
+      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://dapp.yangnian.xyz/');
       const ref = new URL(location.href).searchParams.get('ref'); if (/^[a-f0-9]{24}$/.test(ref || '')) target.searchParams.set('ref', ref);
       link.href = target.href; box.append(el('p', '请在游戏站点连接钱包，查看余额并参与游戏。'), link); ui.openDialog('连接钱包', box); return;
     }

@@ -1,5 +1,5 @@
 // Presentation only: the server chooses the result before the wheel is stopped.
-import { sectorText } from './outcome-view.js?v=server-wheel-77-v13-20260917-3003acd5632b';
+import { sectorText } from './outcome-view.js?v=server-wheel-77-v13-20260917-6f807d16cf94';
 const NS = 'http://www.w3.org/2000/svg';
 const mod = value => ((value % 360) + 360) % 360;
 export function buildWheelSegments(outcomes) {

@@ -6,7 +6,8 @@
 
 ## 本次配置
 
-- 地址：https://sheep-fortune-game.lingolayer.workers.dev/
+- 游戏域名：https://dapp.yangnian.xyz/
+- 原始入口：https://sheep-fortune-game.lingolayer.workers.dev/（保留）
 - 发布日期：2026-09-18；规则版本：`server-wheel-77-v13-20260917`。
 - Wrangler 配置：项目根目录 `wrangler.json`。
 - 数据库绑定：`DB`；名称：`sheep-fortune-game-db`；创建位置偏好：APAC。
@@ -17,6 +18,10 @@
 - 本机管理密钥保存在被 Git 忽略的 `.data/cloudflare-ops.key`（仅本机用户可读写），线上保存为 Workers Secret；自动上传时不要在密钥末尾附加换行。
 
 ## 发布步骤
+
+`dapp.yangnian.xyz` 通过 Cloudflare Dashboard 的 Worker Custom Domain 绑定至现有 `sheep-fortune-game`，同一 D1 数据库继续保存玩家余额和推荐关系。域名托管于 Namecheap，DNS 由 Cloudflare 管理（`kate.ns.cloudflare.com` / `major.ns.cloudflare.com`）；区域 ID 为 `74d3401fa652ce45b6d3caa38c69f946`。
+
+域名绑定由 Dashboard 管理，`wrangler.json` 不声明 `routes`。当前锁定的 Wrangler 4.134.0 在无自定义域名配置时不会重写远程 Custom Domains；后续增加 `routes` 或升级部署工具时需同时保留这个绑定，并在发布后检查新域名的 `/api/health`。首次在新域名访问需重新连接钱包签名，账户按钱包地址识别，无需重新充值。邀请链接使用当前页面域名；GitHub 静态页面跳转到新域名时保留有效的 `ref` 参数。
 
 1. `npm ci`，`npx wrangler login`，`npx wrangler whoami` 确认账户。
 2. 新账户需执行 `npx wrangler d1 create sheep-fortune-game-db --location apac`，将返回的数据库 ID 与账户 ID 配入 `wrangler.json`；已有库不可重复创建。

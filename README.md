@@ -1,6 +1,6 @@
 # 羊年大吉
 
-[打开游戏站点](https://sheep-fortune-game.lingolayer.workers.dev/) · [手机界面](https://0xnickmortal.github.io/sheep-fortune-demo/)
+[打开游戏站点](https://dapp.yangnian.xyz/) · [手机界面](https://0xnickmortal.github.io/sheep-fortune-demo/)
 
 仓库根目录是 GitHub Pages 手机界面，钱包操作前往游戏站点；完整前端、后端、托管合约及测试源码在 [source/game](source/game)。
 

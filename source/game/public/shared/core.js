@@ -385,7 +385,7 @@ export function createGame(ui) {
     if (!ready()) return;
     if (state.busy) return;
     if (LOCAL) {
-      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://sheep-fortune-game.lingolayer.workers.dev/');
+      const box = el('div'), link = el('a', '前往游戏站点', 'dialog-primary'), target = new URL('https://dapp.yangnian.xyz/');
       const ref = new URL(location.href).searchParams.get('ref'); if (/^[a-f0-9]{24}$/.test(ref || '')) target.searchParams.set('ref', ref);
       link.href = target.href; box.append(el('p', '请在游戏站点连接钱包，查看余额并参与游戏。'), link); ui.openDialog('连接钱包', box); return;
     }
