@@ -1,7 +1,39 @@
-<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>羊年吉祥 · 运营管理</title><link rel="stylesheet" href="/admin/whitelist/style.css"></head><body><main>
-<header><p>羊年吉祥 · BSC</p><h1>运营管理</h1><p>连接项目管理员钱包，查看奖池和充值提现。</p><button id="connect">连接管理员钱包</button> <button id="logout" class="secondary">退出</button><p id="identity"></p></header>
-<nav class="actions"><a href="/">返回游戏</a><a href="/admin/whitelist/">白名单管理</a><a href="/admin/pool/">托管合约管理</a></nav>
-<p id="status" role="status"></p>
-<section id="overview" hidden><h2>游戏池</h2><dl id="pool"></dl><button id="refresh">刷新状态</button><button id="sync" class="secondary">核对资金到账</button><p>后台每分钟核对资金。核对只更新账本，不会代替钱包发起转账。</p></section>
-<section id="records-section" hidden><h2>充值与提现记录</h2><div id="records"></div></section>
-</main><script type="module" src="/admin/app.js"></script></body></html>
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>资金与盈亏 · 羊年吉祥管理</title><link rel="stylesheet" href="/admin/style.css"></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/admin/"><span class="brand-mark">羊</span><span>羊年吉祥<small>运营管理台</small></span></a>
+  <p class="nav-label">管理工作台</p>
+  <nav aria-label="后台导航"><a class="active" href="/admin/" aria-current="page"><span>▤</span>资金与盈亏</a><a href="/admin/whitelist/"><span>◇</span>白名单管理</a><a href="/admin/pool/"><span>▣</span>托管合约管理</a></nav>
+  <a class="back-link" href="/">← 返回游戏</a><div class="network"><i></i>BSC 主网</div>
+</aside>
+<main>
+  <header class="page-header"><div><p class="eyebrow">资金管理</p><h1>资金与盈亏</h1><p class="subtitle">按钱包查看资金进出、游戏表现与推荐收益。</p></div><div class="auth"><span id="identity" class="identity" hidden></span><button id="connect">连接管理员钱包</button><button id="logout" class="secondary" hidden>退出</button></div></header>
+  <p id="status" role="status" aria-live="polite"></p>
+  <section id="login-panel" class="login-panel"><span class="login-icon">▤</span><h2>资金记录，清晰归类</h2><p>使用项目管理员钱包登录，即可查看全部玩家地址、充提记录和盈亏明细。</p><div class="login-categories"><span>地址总览</span><span>充值与提现</span><span>游戏盈亏</span><span>推荐收益</span></div></section>
+  <div id="dashboard" hidden>
+    <div class="toolbar"><span id="updated-at" class="muted"></span><div><button id="refresh" class="secondary">↻ 刷新数据</button><button id="sync" class="secondary">核对资金到账</button></div></div>
+    <section class="metrics" aria-label="资金汇总" id="metrics"></section>
+    <section class="mini-metrics" id="mini-metrics" aria-label="账户与待处理汇总"></section>
+    <section class="data-panel">
+      <div class="panel-heading"><div><h2>钱包资金明细</h2><p id="scope-note">全部地址 · 全部时间</p></div><span class="unit">单位：<span id="token-symbol">代币</span></span></div>
+      <form id="filters" class="filters">
+        <label class="search-label">搜索地址<input id="search" type="search" placeholder="输入完整钱包地址或地址片段" autocomplete="off" spellcheck="false" maxlength="42"></label>
+        <label>开始日期<input id="from" type="date" aria-label="开始日期（北京时间）"></label><label>结束日期<input id="to" type="date" aria-label="结束日期（北京时间）"></label>
+        <button type="submit">查询</button><button id="reset" type="button" class="text-button">重置</button>
+      </form>
+      <div class="tabs" role="tablist" aria-label="资金记录分类">
+        <button type="button" role="tab" aria-selected="true" aria-controls="table-panel" data-tab="wallets">地址总览</button><button type="button" role="tab" aria-selected="false" aria-controls="table-panel" data-tab="deposits" tabindex="-1">充值记录</button><button type="button" role="tab" aria-selected="false" aria-controls="table-panel" data-tab="withdrawals" tabindex="-1">提现记录</button><button type="button" role="tab" aria-selected="false" aria-controls="table-panel" data-tab="rounds" tabindex="-1">游戏盈亏</button><button type="button" role="tab" aria-selected="false" aria-controls="table-panel" data-tab="referrals" tabindex="-1">推荐收益</button>
+      </div>
+      <div class="table-toolbar"><p id="table-caption"></p><div class="table-options"><label id="profit-wrap">游戏表现<select id="profit"><option value="all">全部地址</option><option value="profit">盈利地址</option><option value="loss">亏损地址</option><option value="even">持平地址</option><option value="unplayed">未游戏地址</option></select></label><label id="sort-wrap">排序<select id="sort"><option value="activity">最近活跃</option><option value="deposits">充值从高到低</option><option value="withdrawals">提现从高到低</option><option value="profitDesc">盈利从高到低</option><option value="profitAsc">亏损从高到低</option><option value="balance">余额从高到低</option></select></label><label id="record-status-wrap" hidden>状态<select id="record-status"></select></label></div></div>
+      <div id="table-panel" role="tabpanel" aria-label="地址总览"><div class="table-scroll"><table id="main-table"></table></div><div id="empty" class="empty" hidden><strong>暂无符合条件的记录</strong><p>试试其他地址或日期范围。</p></div></div>
+      <div class="pagination"><span id="page-label"></span><div><button id="prev" class="secondary">上一页</button><button id="next" class="secondary">下一页</button></div></div>
+    </section>
+    <details class="definitions"><summary>统计口径与数据说明</summary><div><p><b>游戏净盈亏</b> = 每局实际返还 − 下注本金，已包含当局游戏手续费。充值、提现和金元宝不计入游戏盈亏。</p><p><b>综合净收益</b> = 游戏净盈亏 + 推荐收益 − 已完成提现的手续费。推荐收益按实际入账统计。</p><p><b>累计充值 / 累计提现</b>仅统计已入账充值和已完成提现的实际到账量。待确认充值的金额尚未核验，显示“待核验”，不按 0 计入。</p><p>日期范围按记录创建时间筛选，使用北京时间（UTC+8）；余额、历史待入账奖励和冻结额始终为当前值。地址总览和顶部汇总采用相同筛选条件；明细页的状态筛选只影响明细表。</p><p>仅统计本游戏正式代币账户；运营注资在下方奖池中单列。数据来自游戏账本，不包含钱包外部交易或链上 Gas 费用。点击任一地址可查看该地址的分类明细。金额最多展示 4 位小数，≈ 表示省略尾数，悬停金额可查看完整数值。</p></div></details>
+    <details class="pool-panel"><summary><span>奖池与托管资金</span><small>独立查看运营资金与用户负债</small></summary><p id="pool-status" class="muted"></p><dl id="pool"></dl></details>
+  </div>
+</main>
+<dialog id="wallet-dialog" aria-labelledby="wallet-title"><div class="dialog-header"><div><p class="eyebrow">钱包档案</p><h2 id="wallet-title">地址资金明细</h2></div><button id="close-dialog" class="secondary" aria-label="关闭地址明细">✕</button></div><div class="wallet-heading"><code id="detail-wallet"></code><button id="copy-wallet" class="secondary">复制地址</button><a id="wallet-explorer" target="_blank" rel="noopener noreferrer">浏览器 ↗</a></div><p id="detail-range" class="muted"></p><div id="detail-metrics" class="detail-metrics"></div><div class="tabs" role="tablist" aria-label="地址记录分类" id="detail-tabs"><button role="tab" aria-selected="true" aria-controls="detail-table-panel" data-detail-tab="deposits">充值记录</button><button role="tab" aria-selected="false" aria-controls="detail-table-panel" data-detail-tab="withdrawals" tabindex="-1">提现记录</button><button role="tab" aria-selected="false" aria-controls="detail-table-panel" data-detail-tab="rounds" tabindex="-1">游戏盈亏</button><button role="tab" aria-selected="false" aria-controls="detail-table-panel" data-detail-tab="referrals" tabindex="-1">推荐收益</button></div><p id="detail-status" role="status"></p><div id="detail-table-panel" role="tabpanel" aria-label="充值记录"><div class="table-scroll"><table id="detail-table"></table></div><p id="detail-empty" class="empty" hidden>此地址在所选时间内暂无这类记录。</p></div><div class="pagination"><span id="detail-page-label"></span><div><button id="detail-prev" class="secondary">上一页</button><button id="detail-next" class="secondary">下一页</button></div></div></dialog>
+<script type="module" src="/admin/app.js"></script>
+</body></html>

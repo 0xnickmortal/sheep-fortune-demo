@@ -1,4 +1,5 @@
 import { withdrawalView } from './withdrawal-fee.js';
+import { financeOverview, financeRecords } from './admin-finance.js';
 import { GameError, RULES, formatAmount } from './rules.js';
 import { protectionOptions, protectionRules } from './bet-protection.js';
 import { first, all } from './db.js';
@@ -58,6 +59,8 @@ async function api(request, env) {
   if (route === 'POST /api/auth/logout') return json({loggedOut:true},200,{'Set-Cookie':await walletLogout(db,request)});
   if (route === 'POST /api/auth/verify') { const login = await walletLogin(db, request, env, data); return json(await playerState(db, env, login.owner), 200, { 'Set-Cookie': login.cookie }); }
   if (isAdmin) {
+    if (route === 'GET /api/admin/finance') return json(await financeOverview(db, env, url.searchParams));
+    if (route === 'GET /api/admin/finance/records') return json(await financeRecords(db, env, url.searchParams));
     if (route === 'GET /api/admin/session') return json({admin:true,wallet:adminWallet(env),payments:paymentConfig(env),validation:env.PAYMENTS_VALIDATION_ENABLED==='true',validationWallets:validationWallets(env)});
     if (route === 'POST /api/admin/payments/sync') return json(await syncPayments(db,env));
     if (route === 'GET /api/admin/payments') return json({deposits:await all(db,'SELECT tx_hash,amount,created_at,owner FROM deposits WHERE asset=? ORDER BY created_at DESC LIMIT 100',tokenAsset(env)),pendingDeposits:await all(db,'SELECT tx_hash,status,error,updated_at,owner FROM pending_deposits WHERE asset=? ORDER BY updated_at DESC LIMIT 100',tokenAsset(env)),withdrawals:(await all(db,'SELECT id,recipient,amount,fee,fee_bps,fee_version,status,tx_hash,created_at FROM withdrawals WHERE asset=? ORDER BY created_at DESC LIMIT 100',tokenAsset(env))).map(withdrawalView)});
