@@ -29,7 +29,8 @@ export async function getState(db,owner,{protectionEnabled=false}={}) {
  const t=await first(db,'SELECT * FROM treasuries WHERE asset=?',a.asset);
  if(!t)throw new GameError('奖池暂未准备好',503);
  const policy=await accountPolicy(db,a);
- return {mode:a.asset==='demo'?'demo':'token',wallet:a.wallet,balance:formatAmount(a.available),rewards:formatAmount(a.rewards),ingots:formatAmount(a.ingots??'0'),locked:formatAmount(a.locked),pool:formatAmount(t.available),burned:formatAmount(t.burned),maxBet:formatAmount(maxBet(BigInt(t.available))),revision:a.revision,rules:protectionRules(policy.rules,protectionEnabled),...(protectionEnabled?{protection:protectionState(a,true)}:{}),benefits:policy.benefits,withdrawalFee:policy.withdrawalFee,referral:await referralStatus(db,a)};
+ const completedRounds=protectionEnabled?(await first(db,'SELECT COUNT(*) n FROM rounds WHERE owner=?',owner)).n:0;
+ return {mode:a.asset==='demo'?'demo':'token',wallet:a.wallet,balance:formatAmount(a.available),rewards:formatAmount(a.rewards),ingots:formatAmount(a.ingots??'0'),locked:formatAmount(a.locked),pool:formatAmount(t.available),burned:formatAmount(t.burned),maxBet:formatAmount(maxBet(BigInt(t.available))),revision:a.revision,rules:protectionRules(policy.rules,protectionEnabled),...(protectionEnabled?{protection:protectionState(a,true,completedRounds)}:{}),benefits:policy.benefits,withdrawalFee:policy.withdrawalFee,referral:await referralStatus(db,a)};
 }
 export async function play(db,owner,key,amount,{outcomeFactory,minimumInterval=1500,expectedVersion,requireRulesVersion=false,protectionEnabled=false}={}) {
  const stake=parseAmount(amount,{integer:true});
@@ -48,7 +49,8 @@ export async function play(db,owner,key,amount,{outcomeFactory,minimumInterval=1
   if(stake>maxBet(BigInt(t.available)))throw new GameError('本局金额超过可用奖池限额，请降低金额');
   if(BigInt(t.available)<maximumPayout(stake))throw new GameError('奖池不足以覆盖最高奖励，请稍后再试',409);
   const pendingLoss=protectionEnabled?BigInt(a.recovery_loss??'0'):0n;
-  const plan=protectionEnabled?protectionPlan(stake,spendable,pendingLoss,rules,a.recovery_used??0):null;
+  const completedRounds=protectionEnabled?(await first(db,'SELECT COUNT(*) n FROM rounds WHERE owner=?',owner)).n:0;
+  const plan=protectionEnabled?protectionPlan(stake,spendable,pendingLoss,rules,a.recovery_used??0,completedRounds):null;
   // A competing deposit, withdrawal or spin can change eligibility. Redraw
   // against the newly committed balance instead of reusing an obsolete bonus.
   const drawVersion=protectionEnabled?rules.version+':account:'+a.revision:rules.version;

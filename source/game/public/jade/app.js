@@ -3,7 +3,6 @@ import { mountSkin } from '/shared/skin.js?v=1';
 mountSkin({
   navSelector: '.drawer-nav',
   startLabel: '开转',
-  customLabel: '自定',
   longAfter: 9,
   longerAfter: 11,
   spinningMessage: '转盘转动中…',

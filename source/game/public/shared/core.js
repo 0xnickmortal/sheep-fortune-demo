@@ -1,3 +1,4 @@
+import { INTRO_RECOVERY_TERMS, recoveryDetail } from './protection-view.js';
 import { createWalletRegistry, chooseWalletAccount, releaseWallet } from './wallet-providers.js';
 import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet, readWalletTokenBalance } from './wallet-network.js';
 // Shared client for the alternative mobile frontends (/night/ and /jade/).
@@ -27,7 +28,7 @@ import { sectorText, resultText } from '/outcome-view.js?v=5';
 export { buildWheelSegments, landingIndex, stopAngle, sectorText, resultText };
 
 const PENDING_KEY = 'sheep-pending-v1';
-export const QUICK_BETS = Object.freeze(['500', '1000', '2000']);
+export const QUICK_BETS = Object.freeze(['500', '1000', '2000', '5000']);
 const NS = 'http://www.w3.org/2000/svg';
 
 export const money = value => { const [whole, fraction = ''] = String(value ?? '0').split('.'); return whole.replace(/\B(?=(\d{3})+(?!\d))/g, ',') + (fraction ? '.' + fraction : ''); };
@@ -224,7 +225,6 @@ export function createGame(ui) {
       canPlay: !!a && !state.busy && (guest || state.needsWalletLogin || state.needsBscNetwork || (pending ? pending.path === '/play' : c.payments.enabled && Number(a.balance) >= Number(state.bet) && Number(a.maxBet) >= Number(state.bet))),
       startLabel: state.busy ? '正在处理，请稍候' : guest || state.needsWalletLogin ? '连接钱包' : state.needsBscNetwork ? '切换到 BSC' : pending?.path === '/play' ? '查看上次结果' : !c?.payments.enabled ? '暂未开放' : null,
       startCost: money(pending?.path === '/play' ? pending.data.amount : state.bet),
-      isCustom: !QUICK_BETS.includes(state.bet),
       lockControls: state.busy || !!pending,
       retry: retryPending,
     };
@@ -292,21 +292,15 @@ export function createGame(ui) {
   function rules() {
     const box = el('div', undefined, 'rules');
     if (state.account?.benefits?.whitelisted) box.append(el('p', '当前钱包适用专属游戏配置，提现手续费全免。'));
-    box.append(el('p', '选好金额，点击开始。一次下注只转一次，抽中一个倍率，结算一次奖励。每次至少投入 500 币，可自定义整数金额。'));
+    box.append(el('p', '选好金额，点击开始。一次下注只转一次，抽中一个倍率，结算一次奖励。可选择 500、1,000、2,000 或 5,000 币固定档位。'));
     box.append(el('p', '数字倍率表示包含本金、扣费前的返还倍数。抽中大于 1 倍的奖项，在本局结算时收取投入金额的 5%；小于或等于 1 倍不收费。例：投入 500 币，1.2 倍返还 600 币，扣 25 币，实得 575 币；1.5 倍扣 25 币，实得 725 币。'));
     box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需再次点击开始才会下注。'));
     box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按 1:1 获得金元宝。例如投入 1,000 币，分别获得 1,000 或 500 金元宝。1 倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
     box.append(el('p', '每局代币返还和金元宝均自动到账，无需手动领取。每一局按抽中的倍率判断手续费，费用按代币最小单位向下取整。提币不收取游戏手续费。金元宝与代币分别记账，不能用于下注或直接提币；兑换尚未开放，后续规则另行公布。'));
+    if (state.config.rules.protection?.enabled) box.append(el('h3', '前5把补偿规则'), el('p', INTRO_RECOVERY_TERMS));
     ui.openDialog('转盘玩法', box);
   }
-  function selectBet(value) { state.bet = value; render(); }
-  function customBet() {
-    if (!ready()) return;
-    form('自定义投入', '这一局投入多少币？', state.bet, async value => {
-      if (!/^[1-9]\d{0,8}$/.test(value) || BigInt(value) < BigInt(state.config.rules.minBet) || Number(value) > Number(state.account.maxBet)) throw new Error('请输入 ' + state.config.rules.minBet + ' 至 ' + money(state.account.maxBet) + ' 之间的整数');
-      selectBet(value); ui.closeDialog();
-    }, { note: '请按自己的预算选择，每局投入可能发生亏损。', inputMode: 'numeric' });
-  }
+  function selectBet(value) { if (!QUICK_BETS.includes(value)) return; state.bet = value; render(); }
   async function showRound(round) {
     const index = landingIndex(state.segments, round, state.config.rules.version), copy = resultText(round);
     if (index >= 0) await ui.spinTo(index, round);
@@ -514,11 +508,8 @@ export function createGame(ui) {
       void refreshWalletBalance({ force: true });
     } catch (e) { ui.connectionError(e.message, init); }
   }
-  // Read-only refreshes also pick up deposits and withdrawals made outside this tab.
-  setInterval(() => { if (!document.hidden) void refreshWalletBalance(); }, 15000);
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) void refreshWalletBalance({ force: true }); });
-  window.addEventListener('focus', () => { void refreshWalletBalance(); });
-  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, customBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
+  // No idle polling: page reload and explicit wallet/account actions refresh balances.
+  return { invite:()=>state.account?.mode === 'token' ? features.invite() : connectWallet(), state, init, start, selectBet, rules, tab, refresh, retryPending, loadRecords, loadIngots, connectWallet, disconnectWallet, deposit, withdraw, payments, claimReward, view };
 }
 
 // Generic record rows shared by both frontends; each theme styles the classes.
@@ -529,6 +520,7 @@ export function recordRows(rounds) {
     main.append(el('strong', (round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×') + ' · 投入 ' + money(round.bet) + ' 币'), el('small', when(round.createdAt)));
     side.append(el('strong', signed(round.profit) + ' 币', Number(round.profit) > 0 ? 'positive' : Number(round.profit) < 0 ? 'negative' : ''), el('small', resultText(round).record + (round.outcomeKind === 'empty' ? '' : ' ' + money(round.net))));
     if (Number(round.ingots) > 0) side.append(el('small', '金元宝 +' + money(round.ingots), 'record-ingots'));
+    const recovery = recoveryDetail(round); if (recovery) side.append(el('small', recovery));
     row.append(main, side); return row;
   });
 }

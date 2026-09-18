@@ -26,7 +26,7 @@ test('public launch lets an ordinary wallet deposit, play with protection and wi
   assert.equal(initial.payments.enabled, true); assert.equal(initial.admin, false);
   assert.equal(initial.benefits.whitelisted, false); assert.equal(initial.benefits.withdrawalFeeExempt, false);
   assert.deepEqual(initial.rules.outcomes.map(o => o.weight), RULES.outcomes.map(o => o.weight));
-  assert.equal(initial.protection.maxCompensations, 3);
+  assert.equal(initial.protection.qualifyingRounds, 5);
   assert.equal((await call(outsider, '/admin/session')).status, 403);
   assert.equal((await call(outsider, '/admin/whitelist', {})).status, 403);
   assert.equal((await call(null, '/deposits/prepare', { amount: '500' })).status, 401);
@@ -37,10 +37,9 @@ test('public launch lets an ordinary wallet deposit, play with protection and wi
   await ok(await call(outsider, '/deposits/track', { txHash: deposit.hash }));
   await mine(); await syncPayments(db, live);
   const funded = await ok(await call(outsider, '/account'));
-  assert.equal(funded.balance, '10500');
+  assert.equal(funded.balance, '10500'); assert.equal(funded.protection.completedRounds, 0);
   const spin = await ok(await call(outsider, '/play', { amount: '5500', rulesVersion: funded.rules.version }));
-  assert.equal(spin.round.protection.mode, 'high-stake');
-  assert.notEqual(spin.round.multiplierBps, 0);
+  assert.equal(spin.round.protection.mode, 'intro'); assert.equal(spin.round.protection.highStake, true); assert.notEqual(spin.round.multiplierBps, 0);
   assert.equal(parseEther(spin.balance), parseEther('5000') + parseEther(spin.round.net));
 
   const walletBefore = await token.balanceOf(outsider.address);
@@ -56,7 +55,7 @@ test('public launch lets an ordinary wallet deposit, play with protection and wi
   const after = await ok(await call(outsider, '/account'));
   assert.equal(after.locked, '0'); assert.equal(parseEther(after.balance), parseEther(spin.balance) - parseEther('100'));
   assert.equal(after.protection.pendingLoss, spin.round.protection.pendingAfter);
-  assert.equal(after.protection.used, 0);
+  assert.equal(after.protection.used, 0); assert.equal(after.protection.completedRounds, 1);
   assert.equal((await audit(db)).ok, true);
 });
 

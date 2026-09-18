@@ -1,13 +1,14 @@
+import { protectionNotice, recoveryDetail } from './protection-view.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
 // Shared skin runtime for the themed mobile frontends. Every skin uses the
 // same element ids; this module wires them to the game client and lets each
 // skin supply its own labels, flavour text, seal stamps and effects.
-import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
-import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
+import { createGame, money, signed, el, createSound, particles, haptic, buildWheelSvg, spinRotor, stopAngle, sectorText, recordRows, ingotRows } from './core.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
+import { compactTokenBalance } from './wallet-network.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
 export { particles, haptic, money, signed, el };
 const $ = id => document.getElementById(id);
 const text = (id, value) => { const node = $(id); if (node) node.textContent = value; };
 
-export function mountSkin({ navSelector, startLabel = '转一下', customLabel = '自定义', longAfter = 6, longerAfter = 8, spinningMessage = '好运正在转动…', flavor = {}, stamp = null, celebrate = () => {} }) {
+export function mountSkin({ navSelector, startLabel = '转一下', longAfter = 6, longerAfter = 8, spinningMessage = '好运正在转动…', flavor = {}, stamp = null, celebrate = () => {} }) {
   const sound = createSound('sheep-sound');
   let rotation = 0, groups = [], segmentCount = 24, toastTimer;
   const stage = () => $('wheel-stage');
@@ -45,8 +46,9 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       for (const choice of document.querySelectorAll('.wallet-choices button')) choice.disabled = v.busy;
       text('wallet-selection-status', v.busy ? '请在所选钱包中确认连接…' : '');
       text('deposit-open', '充值');
+      const protectionNote = $('protection-note'), note = protectionNotice(a.protection, v.config.rules);
+      if (protectionNote) { protectionNote.textContent = note; protectionNote.hidden = !note; }
       for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === v.bet; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); }
-      const custom = $('custom-bet'); custom.classList.toggle('chosen', v.isCustom); custom.setAttribute('aria-pressed', String(v.isCustom)); custom.firstElementChild.textContent = v.isCustom ? money(v.bet) : customLabel;
       $('start').disabled = !v.canPlay; $('start').firstElementChild.textContent = v.startLabel || startLabel; text('start-cost', '本局投入 ' + v.startCost + ' 币');
       for (const b of document.querySelectorAll('#bet-choices button, #deposit-open, #withdraw-open')) b.disabled = v.lockControls;
       const box = $('connection-message'); box.replaceChildren();
@@ -82,11 +84,12 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
       s.classList.add('has-result'); s.setAttribute('aria-label', landed ? '转盘结果：' + copy.title : '已恢复上次结算，请查看下方奖励');
       if (landed && stamp?.[kind]) box.append(el('span', stamp[kind], 'result-stamp'));
       const main = el('div', undefined, 'result-main');
-      main.append(el('b', round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×', 'result-multiplier'), el('span', landed ? (flavor[kind] || copy.title) : '已恢复上次结算', 'result-flavor'));
+      main.append(el('b', round.outcomeKind === 'empty' ? '谢谢参与' : round.multiplierBps / 10000 + '×', 'result-multiplier'), el('span', landed ? (round.protection?.mode === 'recovery' ? '补偿局' : flavor[kind] || copy.title) : '已恢复上次结算', 'result-flavor'));
       const side = el('div', undefined, 'result-side'), ingots = Number(round.ingots) > 0;
       side.append(el('strong', copy.amountLabel + ' ' + money(round.net) + ' 币'));
       side.append(el('small', '净变化 ' + signed(round.profit) + ' 币 · ' + (round.version === game.state.config.rules.version ? '手续费 ' : '当时已扣 ') + money(round.fee) + ' 币'));
       side.append(el('small', ingots ? '金元宝 +' + money(round.ingots) : copy.message, ingots ? 'result-ingots' : 'result-message'));
+      const recovery = recoveryDetail(round); if (recovery) side.append(el('small', recovery, 'result-message'));
       box.append(main, side);
       $('stage-message').hidden = true; box.hidden = false;
       if (landed) celebrate(kind, round, { stage: s, sound, particles, haptic });
@@ -106,7 +109,6 @@ export function mountSkin({ navSelector, startLabel = '转一下', customLabel =
   const game = createGame(ui);
   for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => { sound.click(); game.tab(b.dataset.tab); };
   for (const b of document.querySelectorAll('[data-bet]')) b.onclick = () => { sound.click(); game.selectBet(b.dataset.bet); };
-  $('custom-bet').onclick = () => { sound.click(); game.customBet(); };
   $('start').onclick = () => { sound.click(); game.start(); };
   $('rules-open').onclick = () => game.rules();
   $('dialog-close').onclick = closeDialog;

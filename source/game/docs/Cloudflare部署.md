@@ -1,5 +1,7 @@
 # Cloudflare 后台部署
 
+最新发布：2026-09-18，Worker版本 `a498e514-d27c-40df-8519-842136fbd72c`，规则 `server-wheel-77-v13-20260917:first-five-high-stake-recovery-v4`。公开充提保持启用；无需新数据库迁移。前五把补偿、持续大额保护、固定下注档位和手动返佣刷新见 [本次规则说明](前五把补偿与固定档位_20260918.md)。下面的首次接入步骤包含历史关闭状态。
+
 后台使用 Cloudflare Workers，数据库使用 D1；同一 Worker 同时提供手机页面及 `/api/*`，无需跨站 Cookie 或放宽跨域策略。GitHub Pages 仍为独立静态试玩。
 
 首页统一使用 GitHub 上的“红运当头”界面：`public/red/index.html` 是共同模板，服务端构建由 `scripts/frontend-entry.mjs` 处理入口链接并生成根目录首页；本地预览同样使用此模板。Cloudflare 继续调用真实后台 API，不带 GitHub 静态试玩的本地结算标记。

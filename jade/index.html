@@ -8,7 +8,7 @@
 <meta name="description" content="翡翠麻将馆：羊年大吉手机转盘游戏的麻将桌版界面。出牌押注，开转好运。">
 <title>翡翠麻将馆 · 羊年大吉</title>
 <link rel="icon" type="image/png" href="../assets/fortune-sheep.png">
-<link rel="stylesheet" href="style.css?v=server-wheel-77-v13-20260917-16d9980c49d1">
+<link rel="stylesheet" href="style.css?v=server-wheel-77-v13-20260917-75abedd46a0a">
 </head>
 <body>
 <div class="table-shell">
@@ -26,6 +26,7 @@
   <div class="table-center">
     <div class="compass" aria-hidden="true"><span>東</span><span>南</span><span>西</span><span>北</span></div>
     <h1 id="play-title" class="table-title">好运转盘</h1>
+    <p id="protection-note" class="bet-note" aria-live="polite" hidden></p>
     <div class="stage" id="wheel-stage" role="img" aria-label="幸运转盘">
       <div class="rim"><div class="rotor" id="wheel-rotor"></div></div>
       <div class="hub" aria-hidden="true"><img id="mascot" src="../assets/fortune-sheep.png" alt="" width="1254" height="1254" fetchpriority="high"></div>
@@ -67,7 +68,7 @@
       <button class="tile tile-bet" data-bet="500" aria-pressed="true"><b>500</b><small>币</small></button>
       <button class="tile tile-bet" data-bet="1000" aria-pressed="false"><b>1,000</b><small>币</small></button>
       <button class="tile tile-bet" data-bet="2000" aria-pressed="false"><b>2,000</b><small>币</small></button>
-      <button class="tile tile-bet tile-custom" id="custom-bet" aria-pressed="false"><b>自定</b><small>任意整数</small></button>
+      <button class="tile tile-bet" data-bet="5000" aria-pressed="false"><b>5,000</b><small>币</small></button>
     </div><button id="start" class="spin-btn" disabled><span class="spin-label">开转</span><small id="start-cost">本局投入 500 币</small></button></div>
 <nav class="drawer-nav" aria-label="主要功能">
   <button data-tab="play" class="active" aria-current="page"><i aria-hidden="true"></i><span>玩游戏</span></button>
@@ -77,6 +78,6 @@
 </div>
 <dialog id="dialog" aria-labelledby="dialog-title"><header><h2 id="dialog-title"></h2><button id="dialog-close" aria-label="关闭弹窗">×</button></header><div id="dialog-content"></div></dialog>
 <div class="toast" id="toast" role="status" hidden></div>
-<script type="module" src="app.js?v=server-wheel-77-v13-20260917-16d9980c49d1"></script>
+<script type="module" src="app.js?v=server-wheel-77-v13-20260917-75abedd46a0a"></script>
 </body>
 </html>

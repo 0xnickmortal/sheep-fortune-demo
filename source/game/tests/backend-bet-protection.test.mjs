@@ -32,72 +32,115 @@ async function lose(db, owner = 'alice', amount = '5000') {
   return play(db, owner, key(), amount, { ...enabled, outcomeFactory: pick('half') });
 }
 
-test('50% boundary is exact to the smallest token unit; protected weighted draws never hit zero', () => {
+test('stakes below 50% retain base probabilities, while the first-five window still expires', () => {
+  for (const completed of [0, 4]) {
+    const p = protectionPlan(units(500), units(10000), 0n, RULES, 0, completed);
+    assert.equal(p.mode, 'intro'); assert.deepEqual(p.drawRules.outcomes, RULES.outcomes);
+  }
+  assert.equal(protectionPlan(units(500), units(10000), 0n, RULES, 0, 5).mode, 'standard');
+  assert.throws(() => protectionPlan(units(500), units(10000), 0n, RULES, 0, -1), /异常/);
+});
+
+test('50% threshold is exact, removes only zero and persists after the fifth round', () => {
   assert.equal(isHighStake(units(5000), units(10000)), true);
   assert.equal(isHighStake(units(5000), units(10000) + 1n), false);
-  const plan = protectionPlan(units(5000), units(10000), 0n);
-  assert.equal(plan.drawRules.weightTotal, 7200);
-  const counts = {};
-  for (let i = 0; i < 7200; i++) { const id = drawWheel(() => BigInt(i), plan.drawRules).outcomeId; counts[id] = (counts[id] || 0) + 1; }
-  assert.equal(counts['no-prize'], undefined);
-  for (const o of RULES.outcomes.filter(o => o.multiplierBps)) assert.equal(counts[o.id], o.weight);
+  for (const completed of [0, 4, 5, 100]) {
+    const p = protectionPlan(units(5000), units(10000), 0n, RULES, 0, completed);
+    assert.equal(p.highStake, true); assert.equal(p.drawRules.weightTotal, 7200);
+    assert.equal(p.mode, completed < 5 ? 'intro' : 'high-stake');
+    const counts = {};
+    for (let ticket = 0; ticket < 7200; ticket++) { const id = drawWheel(() => BigInt(ticket), p.drawRules).outcomeId; counts[id] = (counts[id] || 0) + 1; }
+    assert.equal(counts['no-prize'], undefined);
+    for (const o of RULES.outcomes.filter(o => o.multiplierBps > 0)) assert.equal(counts[o.id], o.weight);
+  }
   const invalid = { ...RULES, outcomes: RULES.outcomes.map(o => ({ ...o, weight: o.multiplierBps === 0 ? 10000 : 0 })) };
   assert.throws(() => protectionPlan(units(5000), units(10000), 0n, invalid), e => e.code === 'PROTECTION_CONFIG');
 });
 
-test('5000 loss at 0.5x then stake 500 needs 10x; 5x leaves a 525 token shortfall', async t => {
-  const db = await fixture(t), firstRound = await lose(db);
-  assert.equal(firstRound.balance, '7500'); assert.equal(firstRound.round.protection.pendingAfter, '2500');
-  assert.equal((await getState(db, 'alice', enabled)).protection.sourceRound, firstRound.round.id);
-  const five = settlement(units(500), pick('fivefold')(RULES));
-  assert.equal(units(2500) - (five.net - units(500)), units(525));
-  const next = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: () => { throw Error('Recovery must not draw again'); } });
-  assert.equal(next.round.multiplierBps, 100000); assert.equal(next.round.net, '4975');
-  assert.equal(next.balance, '11975'); assert.equal(next.round.protection.recovered, '2500');
-  assert.equal(next.round.protection.sourceRound, firstRound.round.id);
-  assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '0');
-  assert.deepEqual((await history(db, 'alice'))[0].protection, next.round.protection);
-  assert.equal((await audit(db)).ok, true);
-});
-
-test('new stake determines the smallest available multiplier, and recovery caps once at 10x', async t => {
-  for (const [stake, expected] of [['500', 100000], ['1000', 50000], ['2000', 30000], ['3000', 20000], ['6000', 15000]]) {
-    assert.equal(recoveryOutcome(units(stake), units(2500)).score * 50, expected);
+test('500 at zero or half then 5000 at 1.2x covers the loss after fees and adds a small profit', async t => {
+  for (const [outcome, loss, expected] of [['no-prize', '500', '10250'], ['half', '250', '10500']]) {
+    const db = await fixture(t);
+    const lost = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick(outcome) });
+    assert.equal(lost.round.protection.pendingAfter, loss);
+    const next = await play(db, 'alice', key(), '5000', { ...enabled, outcomeFactory: () => { throw Error('Published recovery must not draw randomly'); } });
+    assert.equal(next.round.multiplierBps, 12000); assert.equal(next.round.net, '5750'); assert.equal(next.round.fee, '250');
+    assert.equal(next.balance, expected); assert.equal(next.round.protection.recovered, loss);
+    assert.equal(next.round.protection.sourceRound, lost.round.id);
+    assert.deepEqual((await history(db, 'alice')).find(r => r.id === next.round.id).protection, next.round.protection);
+    assert.equal((await audit(db)).ok, true);
   }
-  const db = await fixture(t, '100000', '20000000'); await lose(db, 'alice', '50000');
+});
+
+test('each freely selected next stake uses closest net profit, allows differences and clears once', async t => {
+  for (const [stake, multiplier, profit, shortfall] of [['500', 20000, '475', '25'], ['1000', 15000, '450', '50'], ['2000', 12000, '300', '200'], ['5000', 12000, '750', '0']]) {
+    const db = await fixture(t);
+    await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('no-prize') });
+    const next = await play(db, 'alice', key(), stake, enabled);
+    assert.equal(next.round.multiplierBps, multiplier); assert.equal(next.round.profit, profit);
+    assert.equal(next.round.protection.shortfall, shortfall); assert.equal(next.round.protection.differenceCarried, false);
+    assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '0');
+    assert.equal((await audit(db)).ok, true);
+  }
+});
+
+test('closest multiplier uses exact net units and lower multiplier on ties, with a 10x ceiling', async t => {
+  // At stake 1000, 1.2x nets +150 and 1.5x nets +450: loss 300 is a tie.
+  assert.equal(recoveryOutcome(units(1000), units(300)).score * 50, 12000);
+  assert.equal(recoveryOutcome(units(1000), units(300) + 1n).score * 50, 15000);
+  const db = await fixture(t, '20000');
+  await play(db, 'alice', key(), '5000', { ...enabled, outcomeFactory: pick('no-prize') });
   const next = await play(db, 'alice', key(), '500', enabled);
-  assert.equal(next.round.protection.capped, true); assert.equal(next.round.protection.shortfall, '20525');
-  assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '0');
-  const later = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('no-prize') });
-  assert.equal(later.round.protection.mode, 'standard'); assert.equal(later.round.multiplierBps, 0);
-  assert.equal((await audit(db)).ok, true);
+  assert.equal(next.round.multiplierBps, 100000); assert.equal(next.round.net, '4975'); assert.equal(next.round.fee, '25');
+  assert.equal(next.balance, '19475'); assert.equal(next.round.protection.recovered, '4475'); assert.equal(next.round.protection.shortfall, '525');
+  assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '0'); assert.equal((await audit(db)).ok, true);
 });
 
-test('small stakes and disabled protection retain original zero outcome and never create recovery', async t => {
+test('round 5 loss is recovered on round 6; a small round 7 bet has no new recovery or zero exclusion', async t => {
   const db = await fixture(t);
-  const small = await play(db, 'alice', key(), '4999', { ...enabled, outcomeFactory: pick('half') });
-  assert.equal(small.round.protection.pendingAfter, '0');
-  const off = await play(db, 'alice', key(), '4000', { minimumInterval: 0, outcomeFactory: pick('no-prize') });
-  assert.equal(off.round.multiplierBps, 0); assert.equal(off.round.protection, undefined);
-  assert.equal(off.round.version, RULES.version);
-  assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '0');
-});
-
-test('idempotent requests and simultaneous distinct spins consume a recovery exactly once', async t => {
-  const db = await fixture(t), k = key();
-  const originals = await Promise.all([1, 2].map(() => play(db, 'alice', k, '5000', { ...enabled, outcomeFactory: pick('half') })));
-  assert.deepEqual(...originals);
-  const options = { ...enabled, outcomeFactory: pick('break-even') };
-  const results = await Promise.all([play(db, 'alice', key(), '500', options), play(db, 'alice', key(), '500', options)]);
-  assert.equal(results.filter(r => r.round.protection.mode === 'recovery').length, 1);
-  assert.equal(results.filter(r => r.round.multiplierBps === 100000).length, 1);
-  assert.equal((await getState(db, 'alice', enabled)).balance, '11975');
-  assert.equal((await first(db, 'SELECT COUNT(*) n FROM rounds')).n, 3);
-  assert.equal((await getState(db, 'alice', enabled)).protection.used, 1);
+  for (let i = 0; i < 4; i++) await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('break-even') });
+  const fifth = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('no-prize') });
+  assert.equal(fifth.round.protection.roundNumber, 5); assert.equal(fifth.round.protection.pendingAfter, '500');
+  const sixth = await play(db, 'alice', key(), '5000', enabled);
+  assert.equal(sixth.round.protection.roundNumber, 6); assert.equal(sixth.round.protection.mode, 'recovery');
+  const seventh = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('no-prize') });
+  assert.equal(seventh.round.protection.mode, 'standard'); assert.equal(seventh.round.multiplierBps, 0); assert.equal(seventh.round.protection.pendingAfter, '0');
+  const state = (await getState(db, 'alice', enabled)).protection;
+  assert.equal(state.completedRounds, 7); assert.equal(state.remainingQualifyingRounds, 0); assert.equal(state.used, 1);
   assert.equal((await audit(db)).ok, true);
 });
 
-test('failed debit, rejected stake and unavailable pool cannot consume pending recovery', async t => {
+test('round 6 still excludes zero for a large bet but a half outcome does not create new compensation', async t => {
+  const db = await fixture(t);
+  for (let i = 0; i < 5; i++) await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('break-even') });
+  await assert.rejects(play(db, 'alice', key(), '5000', { ...enabled, outcomeFactory: pick('no-prize') }), e => e.code === 'INVALID_PROTECTED_OUTCOME');
+  const sixth = await play(db, 'alice', key(), '5000', { ...enabled, outcomeFactory: pick('half') });
+  assert.equal(sixth.round.protection.mode, 'high-stake'); assert.equal(sixth.round.multiplierBps, 5000); assert.equal(sixth.round.protection.pendingAfter, '0');
+  assert.equal((await getState(db, 'alice', enabled)).protection.nextRoundIsRecovery, false);
+});
+
+test('idempotency and simultaneous distinct spins consume compensation and increment rounds once', async t => {
+  const db = await fixture(t), k = key();
+  const originals = await Promise.all([1, 2].map(() => play(db, 'alice', k, '500', { ...enabled, outcomeFactory: pick('no-prize') })));
+  assert.deepEqual(...originals);
+  const results = await Promise.all([1, 2].map(() => play(db, 'alice', key(), '5000', { ...enabled, outcomeFactory: pick('break-even') })));
+  assert.equal(results.filter(r => r.round.protection.mode === 'recovery').length, 1);
+  assert.deepEqual(results.map(r => r.round.protection.roundNumber).sort(), [2, 3]);
+  const state = await getState(db, 'alice', enabled);
+  assert.equal(state.balance, '10250'); assert.equal(state.protection.completedRounds, 3); assert.equal(state.protection.used, 1);
+  assert.equal((await audit(db)).ok, true);
+});
+
+test('concurrent boundary requests cannot earn a second entitlement after round 5', async t => {
+  const db = await fixture(t);
+  for (let i = 0; i < 4; i++) await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('break-even') });
+  const results = await Promise.all([1, 2].map(() => play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('half') })));
+  assert.deepEqual(results.map(r => r.round.protection.mode).sort(), ['intro', 'recovery']);
+  assert.deepEqual(results.map(r => r.round.protection.roundNumber).sort(), [5, 6]);
+  const next = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('half') });
+  assert.equal(next.round.protection.pendingAfter, '0'); assert.equal((await audit(db)).ok, true);
+});
+
+test('rejected stakes, balance shortage, failed debit and unavailable pool do not consume entitlement or round', async t => {
   const db = await fixture(t); await lose(db); const before = await getState(db, 'alice', enabled);
   await assert.rejects(play(db, 'alice', key(), '499', enabled));
   await assert.rejects(play(db, 'alice', key(), '10000', enabled));
@@ -109,19 +152,28 @@ test('failed debit, rejected stake and unavailable pool cannot consume pending r
   assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '2500');
 });
 
-test('recovery persists on reopen, remains wallet-scoped and survives a disabled interval', async t => {
-  const dir = mkdtempSync(join(tmpdir(), 'sheep-protection-')), file = join(dir, 'game.sqlite');
+test('round count and entitlement survive topup, restart and disabled interval; another wallet starts separately', async t => {
+  const dir = mkdtempSync(join(tmpdir(), 'sheep-intro-')), file = join(dir, 'game.sqlite');
   let db = openDatabase(file); t.after(() => { db.close(); rmSync(dir, { recursive: true }); });
   await seed(db, 'alice'); await lose(db); db.close(); db = openDatabase(file);
-  await seed(db, 'bob');
-  assert.equal((await getState(db, 'bob', enabled)).protection.pendingLoss, '0');
+  await seed(db, 'bob'); await demoTopup(db, 'alice', key(), '10000');
   await play(db, 'alice', key(), '500', { minimumInterval: 0, outcomeFactory: pick('break-even') });
-  assert.equal((await getState(db, 'alice', enabled)).protection.pendingLoss, '2500');
+  const a = (await getState(db, 'alice', enabled)).protection, b = (await getState(db, 'bob', enabled)).protection;
+  assert.equal(a.pendingLoss, '2500'); assert.equal(a.completedRounds, 2); assert.equal(b.completedRounds, 0);
   assert.equal((await play(db, 'alice', key(), '500', enabled)).round.protection.mode, 'recovery');
   assert.equal((await audit(db)).ok, true);
 });
 
-test('server flag controls API rule version; client cannot activate or invent a compensation', async t => {
+test('older accounts do not get five new rounds on upgrade; existing legacy entitlement remains payable', async t => {
+  const db = await fixture(t);
+  for (let i = 0; i < 8; i++) await play(db, 'alice', key(), '500', { minimumInterval: 0, outcomeFactory: pick('break-even') });
+  assert.equal((await getState(db, 'alice', enabled)).protection.remainingQualifyingRounds, 0);
+  await stmt(db, 'UPDATE accounts SET recovery_loss=?,recovery_used=3 WHERE id=?', String(units(500)), 'alice').run();
+  const next = await play(db, 'alice', key(), '5000', enabled);
+  assert.equal(next.round.protection.mode, 'recovery'); assert.equal(next.round.protection.usedAfter, 4);
+});
+
+test('server rule version and flag control the policy; client cannot forge entitlement or round count', async t => {
   const db = openDatabase(); t.after(() => db.close());
   const env = { DB: db, LIVE_PAYMENTS_ENABLED: 'false' }, origin = 'https://game.example';
   const request = (path, data, cookie) => new Request(origin + '/api' + path, {
@@ -130,72 +182,14 @@ test('server flag controls API rule version; client cannot activate or invent a 
     ...(data === undefined ? {} : { body: JSON.stringify(data) }),
   });
   const login = await worker.fetch(request('/auth/demo', {}), env), cookie = login.headers.get('set-cookie').split(';')[0];
-  const forged = await worker.fetch(request('/play', { amount: '500', rulesVersion: RULES.version, protectionEnabled: true, pendingLoss: '999999', multiplierBps: 100000 }, cookie), env);
+  const forged = await worker.fetch(request('/play', { amount: '500', rulesVersion: RULES.version, protectionEnabled: true, completedRounds: 0, pendingLoss: '999999' }, cookie), env);
   assert.equal(forged.status, 200); assert.equal((await forged.json()).round.protection, undefined);
   const on = { ...env, BET_PROTECTION_ENABLED: 'true' }, config = await (await worker.fetch(request('/config'), on)).json();
-  assert.equal(config.rules.version, protectionRules().version + ':high-stake-recovery-v2');
-  assert.equal(config.rules.netRtp, null); assert.equal(config.rules.baseNetRtp, '77.0000%');
+  assert.equal(config.rules.version, protectionRules(RULES, true).version);
+  assert.equal(config.rules.netRtp, null); assert.equal(config.rules.baseNetRtp, '77.0000%'); assert.equal(config.rules.protection.lossCapGuaranteed, false);
   const stale = await worker.fetch(request('/play', { amount: '500', rulesVersion: RULES.version }, cookie), on);
   assert.equal(stale.status, 409); assert.equal((await stale.json()).code, 'RULES_CHANGED');
 });
-
-test('wallet has three lifetime compensations; fourth qualifying half earns no recovery but retains no-zero protection', async t => {
-  const db = await fixture(t);
-  for (let used = 0; used < 3; used++) {
-    await seed(db, 'alice');
-    const half = await lose(db);
-    assert.equal(half.round.protection.pendingAfter, '2500');
-    assert.equal(half.round.protection.usedAfter, used);
-    const nextKey = key();
-    const next = await play(db, 'alice', nextKey, '500', enabled);
-    assert.equal(next.round.protection.usedAfter, used + 1);
-    assert.equal(next.round.protection.remaining, 2 - used);
-    assert.deepEqual(await play(db, 'alice', nextKey, '500', enabled), next);
-  }
-  await seed(db, 'alice');
-  const fourth = await lose(db);
-  assert.equal(fourth.round.multiplierBps, 5000);
-  assert.equal(fourth.round.protection.pendingAfter, '0');
-  assert.equal(fourth.round.protection.usedAfter, 3);
-  assert.equal(fourth.round.protection.drawWeights.find(o => o.id === 'no-prize').weight, 0);
-  const later = await play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('no-prize') });
-  assert.equal(later.round.protection.mode, 'standard');
-  assert.equal(later.round.multiplierBps, 0);
-  assert.equal((await getState(db, 'alice', enabled)).protection.remaining, 0);
-  await seed(db, 'bob');
-  assert.equal((await getState(db, 'bob', enabled)).protection.used, 0);
-  assert.equal((await audit(db)).ok, true);
-});
-
-test('two concurrent requests on the last remaining compensation settle and count it once', async t => {
-  const db = await fixture(t);
-  for (let i = 0; i < 2; i++) { await seed(db, 'alice'); await lose(db); await play(db, 'alice', key(), '500', enabled); }
-  await seed(db, 'alice'); await lose(db);
-  const results = await Promise.all([1, 2].map(() => play(db, 'alice', key(), '500', { ...enabled, outcomeFactory: pick('break-even') })));
-  assert.equal(results.filter(r => r.round.protection.mode === 'recovery').length, 1);
-  assert.equal((await getState(db, 'alice', enabled)).protection.used, 3);
-  assert.equal((await audit(db)).ok, true);
-});
-
-test('compensation count persists across restart, topup and flag toggling; failed and capped settlements count correctly', async t => {
-  const dir = mkdtempSync(join(tmpdir(), 'sheep-recovery-quota-')), file = join(dir, 'game.sqlite');
-  let db = openDatabase(file); t.after(() => { db.close(); rmSync(dir, { recursive: true }); });
-  await seed(db, 'alice', '100000', '20000000'); await lose(db, 'alice', '50000');
-  await assert.rejects(play(db, 'alice', key(), '499', enabled));
-  assert.equal((await getState(db, 'alice', enabled)).protection.used, 0);
-  const capped = await play(db, 'alice', key(), '500', enabled);
-  assert.equal(capped.round.protection.capped, true);
-  assert.equal(capped.round.protection.usedAfter, 1);
-  db.close(); db = openDatabase(file);
-  await ensureDemo(db, 'alice');
-  await demoTopup(db, 'alice', key(), '10000');
-  await play(db, 'alice', key(), '500', { minimumInterval: 0, outcomeFactory: pick('half') });
-  const state = await getState(db, 'alice', enabled);
-  assert.equal(state.protection.used, 1); assert.equal(state.protection.remaining, 2);
-  assert.equal(state.protection.pendingLoss, '0');
-  assert.equal((await audit(db)).ok, true);
-});
-
 test('migrations add zeroed recovery fields without changing existing balances or the ledger', async t => {
   const dir = mkdtempSync(join(tmpdir(), 'sheep-recovery-migration-')), migrations = join(dir, 'migrations'), file = join(dir, 'game.sqlite');
   mkdirSync(migrations);

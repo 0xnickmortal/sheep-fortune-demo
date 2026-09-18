@@ -276,3 +276,6 @@ dialog h2{font-family:var(--serif);font-size:22px;font-weight:900;color:var(--la
 .wallet-holding-detail{font-size:24px;font-weight:800;overflow-wrap:anywhere;font-variant-numeric:tabular-nums}
 @media(max-width:360px){.top,.signboard{padding-left:10px;padding-right:10px;grid-template-columns:minmax(0,1fr) 140px;column-gap:6px}.brand-main,.sign-main{font-size:19px}.brand{gap:5px}.seal{width:25px;height:25px}}
 @supports (height:1svh){:root{--wheel:clamp(200px,calc(100svh - 492px),340px)}}
+
+#protection-note{margin:6px 8px 22px;font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+body:has(#protection-note:not([hidden])) .stage{width:min(calc(100% - 20px),calc(var(--wheel) - 20px))}

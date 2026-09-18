@@ -1,9 +1,8 @@
 // 翡翠麻将馆 · Jade Mahjong skin: labels, flavour text, seal stamps and effects over the shared skin runtime.
-import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
+import { mountSkin } from '../shared/skin.js?v=server-wheel-77-v13-20260917-75abedd46a0a';
 mountSkin({
   navSelector: '.drawer-nav',
   startLabel: '开转',
-  customLabel: '自定',
   longAfter: 9,
   longerAfter: 11,
   spinningMessage: '转盘转动中…',

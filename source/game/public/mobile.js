@@ -1,3 +1,4 @@
+import { INTRO_RECOVERY_TERMS } from './shared/protection-view.js';
 import { ensureBscNetwork, isBscChain, loginBscWallet, bscWallet } from './shared/wallet-network.js';
 import { accountFeatures } from './shared/account-features.js';
 import { createWheel, buildWheelSegments, landingIndex } from './wheel.js?v=6';
@@ -96,10 +97,11 @@ function form(title, label, initial, action, options = {}) {
 function rules() {
   const box = el('div');
   if (account?.benefits?.whitelisted) box.append(el('p', '当前钱包适用白名单专属概率，提现手续费全免。以下是本钱包实际使用的概率。'));
-  box.append(el('p', '选好金额，点击“转一下”。一次下注只转一次，抽中一个倍率，结算一次奖励。每次至少投入 500 币，可自定义整数金额。'));
+  box.append(el('p', '选好金额，点击“转一下”。一次下注只转一次，抽中一个倍率，结算一次奖励。可选择 500、1,000、2,000 或 5,000 币固定档位。'));
   box.append(el('p', '数字倍率表示包含本金、扣费前的返还倍数。抽中大于 1 倍的奖项，在本局结算时收取投入金额的 5%；小于或等于 1 倍不收费。例：投入 500 币，1.2 倍返还 600 币，扣 25 币，实得 575 币；1.5 倍扣 25 币，实得 725 币。'));
   box.append(el('p', '“1×”：本局本金全额退回可用余额，不收手续费。你可以自行决定是否继续，下一局仍需点击“转一下”才会下注。'));
   box.append(el('p', '“谢谢参与”：返还 0 代币，获得与本局投入等量的金元宝。0.5 倍返还投入的 50%，其余 50% 按1:1获得金元宝。例如投入1,000币，分别获得1,000或500金元宝。1倍及以上不发金元宝，手续费不换金元宝。10 倍大奖扣费后实得投入的 9.95 倍。'));
+  if (config?.rules.protection?.enabled) box.append(el('h3', '前5把补偿规则'), el('p', INTRO_RECOVERY_TERMS));
   if (config?.rules.outcomes) {
     box.append(el('h3', '本版各倍率概率'));
     const table = el('table', undefined, 'wheel-probability-table'), header = el('tr');
@@ -115,7 +117,7 @@ function rules() {
   box.append(el('p', '当前默认使用测试币，测试币不能提现。测试账户金元宝与正式账户分开，不能兑换真实资产。金元宝从新规则启用后累计，历史亏损不补发。'));
   openDialog('转盘玩法', box);
 }
-function selectBet(value) { bet = value; for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === value; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); } text('custom-bet', ['500', '1000', '2000'].includes(value) ? '自定义' : money(value)); $('custom-bet').classList.toggle('chosen', !['500', '1000', '2000'].includes(value)); render(); }
+function selectBet(value) { if (!['500', '1000', '2000', '5000'].includes(value)) return; bet = value; for (const b of document.querySelectorAll('[data-bet]')) { const yes = b.dataset.bet === value; b.classList.toggle('chosen', yes); b.setAttribute('aria-pressed', String(yes)); } render(); }
 async function showRound(round) {
   const index = landingIndex(segments, round, config.rules.version);
   const copy = resultText(round);
@@ -264,7 +266,6 @@ async function payments() {
 function ready(action) { return () => { if (!account || !config) { notice('正在连接游戏账户，请稍候'); return; } return action(); }; }
 for (const b of document.querySelectorAll('[data-tab]')) b.onclick = () => tab(b.dataset.tab);
 for (const b of document.querySelectorAll('[data-bet]')) b.onclick = () => selectBet(b.dataset.bet);
-$('custom-bet').onclick = ready(() => form('自定义投入', '这一局投入多少币？', bet, async value => { if (!/^[1-9]\d{0,8}$/.test(value) || BigInt(value) < BigInt(config.rules.minBet) || Number(value) > Number(account.maxBet)) throw new Error('请输入 ' + config.rules.minBet + ' 至 ' + account.maxBet + ' 之间的整数'); selectBet(value); $('dialog').close(); }, { note: '请按自己的预算选择，每局投入可能发生亏损。' }));
 $('start').onclick = start; $('refresh-records').onclick = () => loadRecords().catch(failure); $('refresh-ingots').onclick = () => loadIngots().catch(failure);
 $('wheel-rules').onclick = rules; $('rules-open').onclick = rules; $('rules-account').onclick = rules; $('dialog-close').onclick = () => $('dialog').close();
 $('invite-open').onclick=ready(()=>features.invite().catch(failure));
