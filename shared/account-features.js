@@ -1,6 +1,6 @@
-import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-a516cc642097';
-import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-a516cc642097';
-import { createReferralMonitor, referralTotal } from './referral-monitor.js?v=server-wheel-77-v13-20260917-a516cc642097';
+import { bscWallet } from './wallet-network.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
+import { copyText, selectCopyText } from './clipboard.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
+import { createReferralMonitor, referralTotal } from './referral-monitor.js?v=server-wheel-77-v13-20260917-16d9980c49d1';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const money=n=>{const [whole,fraction='']=String(n??'0').split('.');return whole.replace(/\B(?=(\d{3})+(?!\d))/g,',')+(fraction?'.'+fraction:'');};
 const short=a=>a?a.slice(0,6)+'…'+a.slice(-4):'';
@@ -8,7 +8,7 @@ const inviteKey='sheep-invite-v1';
 try{const code=new URL(location.href).searchParams.get('ref');if(/^[a-f0-9]{24}$/.test(code||''))localStorage.setItem(inviteKey,code);}catch{}
 const pendingInvite=()=>{try{return localStorage.getItem(inviteKey)||'';}catch{return '';}};
 function clearInvite(){try{localStorage.removeItem(inviteKey);}catch{}}
-if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-a516cc642097',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
+if(!document.querySelector('link[data-account-features]')){const link=el('link');link.rel='stylesheet';link.href=new URL('./account-features.css?v=server-wheel-77-v13-20260917-16d9980c49d1',import.meta.url).href;link.dataset.accountFeatures='1';document.head.append(link);}
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate,walletProvider=()=>window.ethereum}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   let referralCard, referralDetails, referralData, referralNotice='', referralUpdated='', referralError='';

@@ -38,7 +38,7 @@ for (const file of files) {
 await writeFile(join(target, '.nojekyll'), '');
 await writeFile(join(target, 'README.md'), `# 羊年大吉
 
-[打开游戏站点](https://sheep-fortune-game.lingolayer.workers.dev/) · [手机界面](https://0xnickmortal.github.io/sheep-fortune-demo/)
+[打开游戏站点](https://dapp.yangnian.xyz/) · [手机界面](https://0xnickmortal.github.io/sheep-fortune-demo/)
 
 仓库根目录是 GitHub Pages 手机界面，钱包操作前往游戏站点；完整前端、后端、托管合约及测试源码在 [source/game](source/game)。
 
@@ -63,7 +63,7 @@ Cloudflare Workers + D1 已接入真实托管合约，200万初始奖池及游�
 
 普通基础表净返还率77%，销毁9.3%；直推15%和间推5%均按下注本金计算。已启用大额下注保护：达到可用余额50%不出0倍，抽中0.5倍后下一局按新下注额补偿，每钱包累计最多3次，最高10倍且差额不延续。启用后整体返还率取决于下注行为，不能继续按固定77%理解；详情见 [保护与额度说明](source/game/docs/大额下注保护_三次额度_20260918.md)。
 
-自定义域名 dapp.yangnian.xyz 已配置，DNS/HTTPS生效前入口继续使用现有Workers地址。
+自定义域名 https://dapp.yangnian.xyz/ 已启用，并通过 HTTPS 首页与后台接口验证；与原 Workers 地址共用后台和数据库。
 
 开发配置示例默认关闭真实资金。仓库不含钱包私钥、服务端密钥或玩家数据库。
 `);
