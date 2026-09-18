@@ -19,7 +19,7 @@
 <main>
 <section id="play-view" class="view" aria-labelledby="play-title">
   <div class="hud">
-    <button class="packet-card" data-tab="account"><span class="packet-seal" aria-hidden="true">币</span><span class="packet-body"><small>余额 · <em id="coin-unit">测试币</em></small><strong id="balance">—</strong></span></button>
+    <button class="packet-card" data-tab="account"><span class="packet-seal" aria-hidden="true">币</span><span class="packet-body"><small>余额 · <em id="coin-unit">币</em></small><strong id="balance">—</strong></span></button>
     <button class="packet-card" data-tab="rewards"><span class="packet-seal ingot-seal" aria-hidden="true">宝</span><span class="packet-body"><small>金元宝</small><strong id="ingots-inline">—</strong></span></button>
   </div>
   <div class="stage-card">
@@ -33,18 +33,12 @@
     </div>
     <div class="outcome"><p class="stage-message" id="stage-message" role="status">选个红包，转出好彩头</p><div class="result" id="result" role="status" hidden></div><div id="connection-message" class="connection" role="status"></div></div>
   </div>
-  <section class="legend" aria-labelledby="legend-title">
-    <h2 id="legend-title">奖项一览</h2>
-    <ul id="prizes" class="prize-list" aria-label="全部奖项"></ul>
-    <p class="bet-note" id="bet-note">每局最低 500 币</p>
-    <p class="disclosure"><span id="wheel-odds">格子数量不代表中奖概率 · 10× 0.05%</span><br>大于 1× 按本局投入收 5% · 其余免收 · 奖励自动到账<br><button id="wheel-rules" class="link-btn">查看全部概率</button></p>
-  </section>
 </section>
 <section id="rewards-view" class="view page" aria-labelledby="rewards-title" hidden>
   <div class="page-head"><h1 id="rewards-title">金元宝</h1><p>抽中 0× 或 0.5× 时，损失的代币按 1:1 变成金元宝</p></div>
   <div class="vault">
     <span class="vault-glyph" aria-hidden="true">宝</span>
-    <span id="ingot-mode-label" class="vault-label">测试账户金元宝</span>
+    <span id="ingot-mode-label" class="vault-label">我的金元宝</span>
     <strong id="ingot-balance">—</strong>
     <p>投入 1,000 币：0× 得 1,000 金元宝；0.5× 得 500 金元宝。</p>
     <button class="ghost-btn" disabled>兑换暂未开放</button>
@@ -54,7 +48,7 @@
   <div id="ingot-records" class="records"><p class="empty-note">还没有金元宝记录</p></div>
 </section>
 <section id="account-view" class="view page" aria-labelledby="account-title" hidden>
-  <div class="page-head"><h1 id="account-title">我的账户</h1><p id="account-description">测试币用于体验玩法</p></div>
+  <div class="page-head"><h1 id="account-title">我的账户</h1><p id="account-description">连接钱包后查看余额</p></div>
   <div class="cream-card account-card">
     <span>可用余额</span><strong id="account-balance">—</strong>
     <div class="account-actions"><button id="deposit-open" class="gold-btn">充值</button><button id="withdraw-open" class="ghost-btn">提现</button></div>
@@ -64,9 +58,6 @@
   <p class="wallet-address" id="wallet-address"></p>
   <button class="menu-row" id="invite-open"><span>邀请好友 · 推荐奖励</span><span aria-hidden="true">›</span></button>
   <button class="menu-row" id="payments-open"><span>充值与提现记录</span><span aria-hidden="true">›</span></button>
-  <button class="menu-row" id="rules-account"><span>游戏规则</span><span aria-hidden="true">›</span></button>
-  <p class="fine center">测试币和正式代币账户分开记账。<br>请保管好钱包，勿向任何人提供私钥。</p>
-  <p class="fine center" id="pool-note"></p>
   <div class="list-head"><h2>最近游戏记录</h2><button id="refresh-records" class="link-btn">刷新</button></div>
   <div id="records" class="records"><p class="empty-note">还没有游戏记录</p></div>
   <nav class="skins" aria-label="切换界面风格"><span>换个风格：</span><a href="/">经典红金</a><a href="/night/">福运夜市</a><a href="/jade/">翡翠麻将馆</a><a href="/red/" aria-current="page">红运当头</a></nav>

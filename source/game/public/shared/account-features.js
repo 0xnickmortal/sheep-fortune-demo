@@ -10,20 +10,16 @@ if(!document.querySelector('link[data-account-features]')){const link=el('link')
 export function accountFeatures({api,mutate,account,config,refresh,openDialog,notice,canOperate}) {
   const button=(label,action)=>{const b=el('button',label,'dialog-primary');b.type='button';b.onclick=async()=>{b.disabled=true;try{await action();}catch(e){notice(e.code===4001?'已取消钱包操作':e.message||'操作暂未完成');}finally{b.disabled=false;}};return b;};
   function sharing(box,code){
-    const trial=!code,url=new URL(location.href);url.search='';url.hash='';if(code)url.searchParams.set('ref',code);
-    const label=el('label',trial?'试玩分享链接':'我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);label.append(input);box.append(label);
-    box.append(button(trial?'复制试玩链接':'复制邀请链接',async()=>{try{await navigator.clipboard.writeText(url.href);notice(trial?'试玩链接已复制':'邀请链接已复制');}catch{input.focus();input.select();notice('请长按链接复制');}}));
-    if(navigator.share)box.append(button('分享给好友',async()=>{try{await navigator.share({title:trial?'羊年大吉 · 一起来试玩':'羊年大吉 · 邀请好友',url:url.href});}catch(e){if(e.name!=='AbortError')throw e;}}));
+    const url=new URL(location.href);url.search='';url.hash='';url.searchParams.set('ref',code);
+    const label=el('label','我的邀请链接'),input=el('input');input.value=url.href;input.readOnly=true;input.setAttribute('aria-label',label.textContent);label.append(input);box.append(label);
+    box.append(button('复制邀请链接',async()=>{try{await navigator.clipboard.writeText(url.href);notice('邀请链接已复制');}catch{input.focus();input.select();notice('请长按链接复制');}}));
+    if(navigator.share)box.append(button('分享给好友',async()=>{try{await navigator.share({title:'羊年大吉 · 邀请好友',url:url.href});}catch(e){if(e.name!=='AbortError')throw e;}}));
   }
   async function invite(){
-    const box=el('div',undefined,'invite-center');let data;
-    if(document.querySelector('meta[name="sheep-backend"][content="local"]'))data={supported:false,message:'当前为试玩版，正式邀请返佣尚未开放。'};
-    else data=await api('/referrals');
+    const box=el('div',undefined,'invite-center'),data=await api('/referrals');
     box.append(el('p','邀请好友，一起转出好运','invite-lead'));
     if(!data.supported){
-      box.append(el('p','先把游戏发给朋友，一起试玩。'));
-      sharing(box);
-      box.append(el('p','试玩链接不绑定推荐关系、不计返佣。','invite-hint'),el('p',data.message));
+      box.append(el('p','请连接钱包并完成一局游戏，再生成邀请链接。'));
       openDialog('邀请好友',box);return;
     }
     const stats=el('div',undefined,'invite-stats');

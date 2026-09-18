@@ -1,5 +1,5 @@
-// Builds dist-share/: a backend-free copy of the three mobile skins that
-// settles test-coin rounds in the browser with the same published rules.
+// Builds dist-share/: the three mobile skins with wallet actions linked to
+// the server-backed game. Static Pages never settles balances locally.
 // dist-share/index.html is a complete document for any static host (a tunnel,
 // GitHub Pages, a CDN); dist-share/artifact.html is the same page as a body
 // fragment for the claude.ai artifact host, which adds its own skeleton.
@@ -19,7 +19,6 @@ await transform('public/shared/skin.js', `${out}/shared/skin.js`, [["'/shared/co
 await cp('public/shared/account-features.js', `${out}/shared/account-features.js`);
 await cp('public/shared/wallet-network.js', `${out}/shared/wallet-network.js`);
 await cp('public/shared/account-features.css', `${out}/shared/account-features.css`);
-await cp('public/shared/local-api.js', `${out}/shared/local-api.js`);
 await cp('server/rules.js', `${out}/shared/rules.js`);
 await cp('server/bags.js', `${out}/shared/bags.js`);
 await cp('public/wheel.js', `${out}/wheel.js`);
@@ -57,4 +56,4 @@ const body = red.slice(red.indexOf('<body>') + '<body>'.length, red.lastIndexOf(
 const fragment = `<title>羊年大吉转盘</title>\n<meta name="sheep-backend" content="local">\n<link rel="stylesheet" href="red/style.css?v=1">\n${body}\n`;
 await writeFile(`${out}/artifact.html`, fragment);
 await versionAssets(out, RULES.version);
-console.log('Built dist-share: front page = 红运当头, plus night/ and jade/, all settling test-coin rounds in the browser.');
+console.log('Built dist-share: 红运当头, night/ and jade/, with wallet actions linked to the game site.');

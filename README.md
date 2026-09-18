@@ -1,12 +1,12 @@
 # 羊年大吉
 
-[打开云端后台体验版](https://sheep-fortune-game.lingolayer.workers.dev/) · [静态手机试玩](https://0xnickmortal.github.io/sheep-fortune-demo/)
+[打开游戏站点](https://sheep-fortune-game.lingolayer.workers.dev/) · [手机界面](https://0xnickmortal.github.io/sheep-fortune-demo/)
 
-仓库根目录是 GitHub Pages 静态试玩页面；完整前端、后端、托管合约及测试源码在 [source/game](source/game)。
+仓库根目录是 GitHub Pages 手机界面，钱包操作前往 Cloudflare 游戏站点；完整前端、后端、托管合约及测试源码在 [source/game](source/game)。
 
 本次包含“我的账户 → 邀请好友”、直推15%/间推5%返佣、托管充值、签名提现及批量销毁实现。
 
-**Pages 只有静态测试币试玩。** Cloudflare Workers + D1 后台已部署：登录、余额、金元宝、游戏记录由服务器保存，推荐接口已发布。真实充值、提现与真实游戏仍关闭；托管合约尚未部署，试玩账户不产生推荐返佣。
+页面已移除测试入口、奖项说明块和概率表；仅显示钱包账户资产。GitHub Pages 不再使用浏览器本地余额结算。Cloudflare Workers + D1 提供游戏后台，真实充值提现仍按线上开关控制，本次界面更新不启用真实资金。
 
 ## 开发
 

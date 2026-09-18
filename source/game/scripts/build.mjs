@@ -12,6 +12,10 @@ await rm('dist', { recursive: true, force: true });
 await mkdir('dist/server', { recursive: true });
 if (!cloudflare) await mkdir('dist/.openai', { recursive: true });
 await cp('public', 'dist/client', { recursive: true });
+// Retired browser-only pages must not remain reachable from the public release.
+for (const entry of ['folio', 'orbit', 'signal', 'app.js', 'engine.js', 'mobile.js', 'mobile.css', 'style.css', 'wheel.css', 'shared/local-api.js']) {
+ await rm(`dist/client/${entry}`, { recursive: true, force: true });
+}
 for (const skin of ['red', 'night', 'jade']) {
  const html = serverSkinPage(await readFile(`public/${skin}/index.html`, 'utf8'));
  await writeFile(`dist/client/${skin}/index.html`, html);
